@@ -1,0 +1,54 @@
+2025-04-25 17:45:17,076 - LazyAnalyzerIntegration - INFO - Starting LazyStockAnalyzer integration
+2025-04-25 17:45:19,393 - LazyAnalyzerIntegration - INFO - Successfully integrated LazyStockAnalyzer with VisualStockSystem
+2025-04-25 17:45:20,471 - LazyAnalyzerIntegration - ERROR - Failed to integrate with StockReview: type object 'StockReview' has no attribute 'analyze_performance'
+2025-04-25 17:45:20,473 - LazyAnalyzerIntegration - INFO - Successfully integrated LazyStockAnalyzer with VolumePriceStrategy
+2025-04-25 17:45:20,473 - LazyAnalyzerIntegration - INFO - Integration results:
+2025-04-25 17:45:20,473 - LazyAnalyzerIntegration - INFO -   VisualStockSystem: SUCCESS
+2025-04-25 17:45:20,474 - LazyAnalyzerIntegration - INFO -   StockReview: FAILED
+2025-04-25 17:45:20,474 - LazyAnalyzerIntegration - INFO -   VolumePriceStrategy: SUCCESS
+2025-04-25 17:45:20,474 - LazyAnalyzerIntegration - INFO - Integration failed
+2025-04-25 17:47:50,220 - LazyAnalyzerIntegration - INFO - Starting LazyStockAnalyzer integration
+2025-04-25 17:47:54,214 - LazyAnalyzerIntegration - INFO - Successfully integrated LazyStockAnalyzer with VisualStockSystem
+2025-04-25 17:47:55,750 - LazyAnalyzerIntegration - INFO - Successfully integrated LazyStockAnalyzer with StockReview
+2025-04-25 17:47:55,751 - LazyAnalyzerIntegration - INFO - Successfully integrated LazyStockAnalyzer with VolumePriceStrategy
+2025-04-25 17:47:55,751 - LazyAnalyzerIntegration - INFO - Integration results:
+2025-04-25 17:47:55,751 - LazyAnalyzerIntegration - INFO -   VisualStockSystem: SUCCESS
+2025-04-25 17:47:55,751 - LazyAnalyzerIntegration - INFO -   StockReview: SUCCESS
+2025-04-25 17:47:55,751 - LazyAnalyzerIntegration - INFO -   VolumePriceStrategy: SUCCESS
+2025-04-25 17:47:55,752 - LazyAnalyzerIntegration - INFO - Running integration test...
+2025-04-25 17:47:55,969 - ChinaStockProvider - INFO - Tushare API初始化成功
+2025-04-25 17:47:55,969 - ChinaStockProvider - INFO - ChinaStockProvider初始化完成，当前数据源: tushare, 可用数据源: ['tushare', 'akshare']
+2025-04-25 17:47:55,969 - ChinaStockProvider - INFO - 数据源已设置为: tushare
+2025-04-25 17:47:55,970 - VisualStockSystem - INFO - 已切换数据源为: tushare
+2025-04-25 17:47:55,970 - VisualStockSystem - INFO - VisualStockSystem初始化完成，数据源: tushare
+2025-04-25 17:47:55,970 - LazyAnalyzerIntegration - INFO - Using LazyStockAnalyzer for 000001.SZ
+2025-04-25 17:47:56,402 - ChinaStockProvider - INFO - 成功通过Tushare daily接口获取000001.SZ的数据: 79条
+2025-04-25 17:47:57,302 - LazyAnalyzerIntegration - ERROR - Error in patched analyze_stock: 'trend'
+2025-04-25 17:47:57,303 - LazyAnalyzerIntegration - INFO - Falling back to original analyze_stock method
+2025-04-25 17:47:57,304 - VisualStockSystem - ERROR - 获取股票数据失败: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-04-25 17:47:57,313 - LazyAnalyzerIntegration - INFO - Analysis completed in 1.34 seconds
+2025-04-25 17:47:57,314 - LazyAnalyzerIntegration - ERROR - Integration test failed: 'tuple' object has no attribute 'keys'
+2025-04-25 17:47:57,317 - LazyAnalyzerIntegration - INFO - Integration test: FAILED
+2025-04-25 17:47:57,317 - LazyAnalyzerIntegration - INFO - Integration completed successfully
+2025-04-25 17:49:24,314 - LazyAnalyzerIntegration - INFO - Starting LazyStockAnalyzer integration
+2025-04-25 17:49:28,553 - LazyAnalyzerIntegration - INFO - Successfully integrated LazyStockAnalyzer with VisualStockSystem
+2025-04-25 17:49:31,073 - LazyAnalyzerIntegration - INFO - Successfully integrated LazyStockAnalyzer with StockReview
+2025-04-25 17:49:31,074 - LazyAnalyzerIntegration - INFO - Successfully integrated LazyStockAnalyzer with VolumePriceStrategy
+2025-04-25 17:49:31,075 - LazyAnalyzerIntegration - INFO - Integration results:
+2025-04-25 17:49:31,075 - LazyAnalyzerIntegration - INFO -   VisualStockSystem: SUCCESS
+2025-04-25 17:49:31,075 - LazyAnalyzerIntegration - INFO -   StockReview: SUCCESS
+2025-04-25 17:49:31,075 - LazyAnalyzerIntegration - INFO -   VolumePriceStrategy: SUCCESS
+2025-04-25 17:49:31,075 - LazyAnalyzerIntegration - INFO - Running integration test...
+2025-04-25 17:49:31,238 - ChinaStockProvider - INFO - Tushare API初始化成功
+2025-04-25 17:49:31,239 - ChinaStockProvider - INFO - ChinaStockProvider初始化完成，当前数据源: tushare, 可用数据源: ['tushare', 'akshare']
+2025-04-25 17:49:31,239 - ChinaStockProvider - INFO - 数据源已设置为: tushare
+2025-04-25 17:49:31,239 - VisualStockSystem - INFO - 已切换数据源为: tushare
+2025-04-25 17:49:31,239 - VisualStockSystem - INFO - VisualStockSystem初始化完成，数据源: tushare
+2025-04-25 17:49:31,240 - LazyAnalyzerIntegration - INFO - Using LazyStockAnalyzer for 000001.SZ
+2025-04-25 17:49:31,796 - ChinaStockProvider - INFO - 成功通过Tushare daily接口获取000001.SZ的数据: 79条
+2025-04-25 17:49:32,648 - LazyAnalyzerIntegration - INFO - Analysis completed in 1.41 seconds
+2025-04-25 17:49:32,649 - LazyAnalyzerIntegration - INFO - Analysis result keys: ['date', 'open', 'high', 'low', 'close', 'volume', 'ma5', 'ma10', 'ma20', 'ma30', 'ma60', 'ema5', 'ema10', 'ema21', 'ema34', 'ema55', 'macd', 'macd_signal', 'macd_hist', 'rsi6', 'rsi14', 'rsi24', 'rsi', 'boll_upper', 'boll_middle', 'boll_lower', 'boll_position', 'boll_width', 'k', 'd', 'j', 'atr', 'atr_percent', 'volume_ma5', 'volume_ma10', 'volume_ma20', 'volume_ratio', 'volume_change', 'trend_direction', 'momentum', 'adx', 'pos_di', 'neg_di', 'obv', 'obv_ma10', 'obv_ratio', 'analysis_time', 'trend', 'symbol', 'name', 'recommendation']
+2025-04-25 17:49:32,649 - LazyAnalyzerIntegration - INFO - Recommendation: 观望
+2025-04-25 17:49:32,649 - LazyAnalyzerIntegration - INFO - Integration test passed successfully!
+2025-04-25 17:49:32,649 - LazyAnalyzerIntegration - INFO - Integration test: SUCCESS
+2025-04-25 17:49:32,650 - LazyAnalyzerIntegration - INFO - Integration completed successfully

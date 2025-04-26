@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "mappings": {
+    "sina": {
+      "半导体及元件": "BK0917",
+      "电力设备": "BK0493"
+    },
+    "tencent": {
+      "新能源汽车": "BK0903",
+      "光伏概念": "BK0588"
+    }
+  },
+  "default_source": "eastmoney"
+}

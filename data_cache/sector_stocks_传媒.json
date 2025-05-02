@@ -1,0 +1,65 @@
+{
+  "status": "success",
+  "data": {
+    "sector": "传媒",
+    "stocks": [
+      {
+        "ts_code": "603028.SH",
+        "name": "传媒A科技",
+        "in_date": "20230103"
+      },
+      {
+        "ts_code": "008836.SZ",
+        "name": "传媒B科技",
+        "in_date": "20240613"
+      },
+      {
+        "ts_code": "606855.SH",
+        "name": "传媒C集团",
+        "in_date": "20250202"
+      },
+      {
+        "ts_code": "005253.SZ",
+        "name": "传媒D股份",
+        "in_date": "20230125"
+      },
+      {
+        "ts_code": "603466.SH",
+        "name": "传媒E集团",
+        "in_date": "20220930"
+      },
+      {
+        "ts_code": "007738.SZ",
+        "name": "传媒F集团",
+        "in_date": "20220822"
+      },
+      {
+        "ts_code": "605297.SH",
+        "name": "传媒G公司",
+        "in_date": "20230916"
+      },
+      {
+        "ts_code": "009399.SZ",
+        "name": "传媒H股份",
+        "in_date": "20230413"
+      },
+      {
+        "ts_code": "607780.SH",
+        "name": "传媒I科技",
+        "in_date": "20241202"
+      },
+      {
+        "ts_code": "003956.SZ",
+        "name": "传媒J集团",
+        "in_date": "20241011"
+      },
+      {
+        "ts_code": "602756.SH",
+        "name": "传媒K科技",
+        "in_date": "20241201"
+      }
+    ],
+    "total": 11,
+    "update_time": "2025-05-02 15:07:58"
+  }
+}

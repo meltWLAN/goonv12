@@ -1,0 +1,12 @@
+{
+  "非银金融": "DEFAULT_001",
+  "建筑装饰": "DEFAULT_002",
+  "电子": "DEFAULT_003",
+  "食品饮料": "DEFAULT_004",
+  "医药生物": "DEFAULT_005",
+  "汽车": "DEFAULT_006",
+  "休闲服务": "DEFAULT_007",
+  "计算机": "DEFAULT_008",
+  "电气设备": "DEFAULT_009",
+  "家用电器": "DEFAULT_010"
+} 

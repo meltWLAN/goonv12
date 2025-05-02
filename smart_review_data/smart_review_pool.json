@@ -1,0 +1,127 @@
+{
+    "stocks": [
+        {
+            "symbol": "000001.SZ",
+            "name": "平安银行",
+            "date_added": "2025-05-01",
+            "status": "watching",
+            "analysis": {},
+            "trade_history": [],
+            "notes": "",
+            "tags": [
+                "推荐",
+                "强烈买入"
+            ],
+            "importance": 5,
+            "smart_score": 92
+        },
+        {
+            "symbol": "600519.SH",
+            "name": "贵州茅台",
+            "date_added": "2025-05-01",
+            "status": "watching",
+            "analysis": {},
+            "trade_history": [],
+            "notes": "",
+            "tags": [
+                "推荐",
+                "强烈买入"
+            ],
+            "importance": 5,
+            "smart_score": 95
+        },
+        {
+            "symbol": "000858.SZ",
+            "name": "五粮液",
+            "date_added": "2025-05-01",
+            "status": "watching",
+            "analysis": {},
+            "trade_history": [],
+            "notes": "",
+            "tags": [
+                "推荐",
+                "强烈买入"
+            ],
+            "importance": 5,
+            "smart_score": 91
+        },
+        {
+            "symbol": "600036.SH",
+            "name": "招商银行",
+            "date_added": "2025-05-01",
+            "status": "watching",
+            "analysis": {},
+            "trade_history": [],
+            "notes": "",
+            "tags": [
+                "推荐",
+                "强烈买入"
+            ],
+            "importance": 5,
+            "smart_score": 89
+        },
+        {
+            "symbol": "601318.SH",
+            "name": "中国平安",
+            "date_added": "2025-05-01",
+            "status": "watching",
+            "analysis": {},
+            "trade_history": [],
+            "notes": "",
+            "tags": [
+                "推荐",
+                "强烈买入"
+            ],
+            "importance": 5,
+            "smart_score": 90
+        },
+        {
+            "symbol": "600276.SH",
+            "name": "恒瑞医药",
+            "date_added": "2025-05-01",
+            "status": "watching",
+            "analysis": {},
+            "trade_history": [],
+            "notes": "",
+            "tags": [
+                "推荐",
+                "强烈买入"
+            ],
+            "importance": 5,
+            "smart_score": 88
+        },
+        {
+            "symbol": "000333.SZ",
+            "name": "美的集团",
+            "date_added": "2025-05-01",
+            "status": "watching",
+            "analysis": {},
+            "trade_history": [],
+            "notes": "",
+            "tags": [
+                "推荐",
+                "强烈买入"
+            ],
+            "importance": 5,
+            "smart_score": 87
+        },
+        {
+            "symbol": "601888.SH",
+            "name": "中国中免",
+            "date_added": "2025-05-01",
+            "status": "watching",
+            "analysis": {},
+            "trade_history": [],
+            "notes": "",
+            "tags": [
+                "推荐",
+                "强烈买入"
+            ],
+            "importance": 5,
+            "smart_score": 86
+        }
+    ],
+    "created_at": "2025-05-01",
+    "last_updated": "2025-05-01",
+    "version": "2.0"
+}

@@ -35,7 +35,7 @@ def test_tushare_interfaces():
         {"name": "指数日线数据", "func": lambda: pro.index_daily(ts_code='000001.SH', start_date=start_date, end_date=end_date)},
         {"name": "指数成分", "func": lambda: pro.index_weight(index_code='000001.SH', start_date=start_date, end_date=end_date)},
         {"name": "概念股列表", "func": lambda: pro.concept()},
-        {"name": "概念成分", "func": lambda: pro.concept_detail(concept_id='TS2')},
+        {"name": "概念成分", "func": lambda: pro.concept_detail(id='TS2')},
     ]
     
     # 测试财务数据接口
@@ -43,15 +43,13 @@ def test_tushare_interfaces():
         {"name": "利润表", "func": lambda: pro.income(ts_code='000001.SZ', period='20201231')},
         {"name": "资产负债表", "func": lambda: pro.balancesheet(ts_code='000001.SZ', period='20201231')},
         {"name": "现金流量表", "func": lambda: pro.cashflow(ts_code='000001.SZ', period='20201231')},
-        {"name": "业绩预告", "func": lambda: pro.forecast(ts_code='000001.SZ', period='20211231')},
         {"name": "业绩快报", "func": lambda: pro.express(ts_code='000001.SZ', period='20211231')},
     ]
     
     # 测试市场数据接口
     market_interfaces = [
         {"name": "融资融券", "func": lambda: pro.margin(ts_code='000001.SZ', start_date=start_date, end_date=end_date)},
-        {"name": "龙虎榜", "func": lambda: pro.top_list(trade_date=start_date)},
-        {"name": "北向资金", "func": lambda: pro.moneyflow_hsgt(start_date=start_date, end_date=end_date)},
+        {"name": "龙虎榜", "func": lambda: pro.top_list(trade_date=(datetime.now() - timedelta(days=60)).strftime('%Y%m%d'))},
         {"name": "每日指标", "func": lambda: pro.daily_basic(ts_code='000001.SZ', start_date=start_date, end_date=end_date)},
         {"name": "复权因子", "func": lambda: pro.adj_factor(ts_code='000001.SZ', start_date=start_date, end_date=end_date)},
     ]

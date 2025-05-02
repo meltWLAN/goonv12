@@ -1,189 +1,199 @@
-import sys
-import argparse
+"""
+系统主入口
+整合数据源监控、缓存管理和并行处理功能
+"""
+
+import asyncio
+import logging
 import os
-import traceback
-from PyQt5.QtWidgets import QApplication
-from stock_analyzer_app import StockAnalyzerApp
-from visual_stock_system import VisualStockSystem
-from stock_selector import main as run_stock_selector
-from single_stock_analyzer import SingleStockAnalyzer
-from stock_review import StockReview
+import yaml
+import signal
+from typing import Dict, Optional
+from data_source_monitor import DataSourceMonitor
+from cache_manager import CacheManager
+from parallel_processor import ParallelProcessor
+from enhanced_data_provider import EnhancedDataProvider
 
-def parse_arguments():
-    """解析命令行参数"""
-    parser = argparse.ArgumentParser(description='股票分析系统')
-    parser.add_argument('--cli', action='store_true', help='在命令行模式下运行')
-    parser.add_argument('--scan', action='store_true', help='扫描市场并推荐股票')
-    parser.add_argument('--analyze', type=str, help='分析单只股票，例如：000001.SZ')
-    parser.add_argument('--top', type=int, default=15, help='推荐股票数量')
-    parser.add_argument('--token', type=str, help='API令牌')
-    parser.add_argument('--review', action='store_true', help='运行复盘模块')
-    parser.add_argument('--add-to-review', action='store_true', help='将扫描结果添加到复盘股票池')
-    parser.add_argument('--backtest-review', action='store_true', help='回测复盘股票池')
-    return parser.parse_args()
+class SystemManager:
+    """系统管理器"""
+    def __init__(self):
+        self._setup_logging()
+        self.logger = logging.getLogger("SystemManager")
+        self.config = self._load_config()
+        self.is_running = False
+        self.components: Dict[str, Optional[object]] = {
+            'monitor': None,
+            'cache': None,
+            'processor': None,
+            'data_provider': None
+        }
 
-def analyze_single_stock(stock_code, token=None):
-    """分析单只股票"""
-    try:
-        # 使用SingleStockAnalyzer而不是直接使用VisualStockSystem
-        analyzer = SingleStockAnalyzer(token)
-        result = analyzer.get_detailed_analysis(stock_code)
+    def _setup_logging(self):
+        """配置日志系统"""
+        log_dir = "logs"
+        os.makedirs(log_dir, exist_ok=True)
         
-        # 如果SingleStockAnalyzer失败，尝试使用VisualStockSystem作为备选
-        if result['status'] != 'success':
-            print(f"使用单股分析器失败，正在尝试备选方式分析...")
-            system = VisualStockSystem(token, headless=True)
-            analysis, _ = system.analyze_stock(stock_code)
-            if analysis:
-                result = {
-                    'status': 'success',
-                    'data': {
-                        'name': analysis['name'],
-                        'last_price': analysis['close'],
-                        'trend_analysis': analysis['trend_analysis'],
-                        'volume_analysis': analysis['volume_analysis'],
-                        'technical_indicators': analysis['technical_indicators'],
-                        'trading_advice': analysis.get('trading_advice', {}).get('action', '观望')
-                    }
-                }
-            else:
-                return False
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(os.path.join(log_dir, "system.log")),
+                logging.StreamHandler()
+            ]
+        )
+
+    def _load_config(self) -> dict:
+        """加载配置文件"""
+        try:
+            with open("data_source_config.yaml", 'r') as f:
+                return yaml.safe_load(f)
+        except Exception as e:
+            self.logger.error(f"加载配置文件失败: {str(e)}")
+            raise
+
+    async def _initialize_components(self):
+        """初始化所有组件"""
+        try:
+            # 初始化数据源监控
+            self.components['monitor'] = DataSourceMonitor("data_source_config.yaml")
+            await self.components['monitor'].start_monitoring()
+            self.logger.info("数据源监控已启动")
+
+            # 初始化缓存管理器
+            self.components['cache'] = CacheManager(self.config)
+            await self.components['cache'].start()
+            self.logger.info("缓存管理器已启动")
+
+            # 初始化并行处理器
+            self.components['processor'] = ParallelProcessor(self.config)
+            self.logger.info("并行处理器已启动")
+
+            # 初始化数据提供者
+            self.components['data_provider'] = EnhancedDataProvider(
+                token=os.getenv("TUSHARE_TOKEN"),
+                cache_dir=self.config['cache']['disk_path']
+            )
+            self.logger.info("数据提供者已启动")
+
+        except Exception as e:
+            self.logger.error(f"初始化组件失败: {str(e)}")
+            await self.shutdown()
+            raise
+
+    async def _health_check(self):
+        """系统健康检查"""
+        while self.is_running:
+            try:
+                # 检查数据源状态
+                if self.components['monitor']:
+                    status = self.components['monitor'].get_all_source_status()
+                    for source, stats in status.items():
+                        if stats['status'] != 'healthy':
+                            self.logger.warning(f"数据源 {source} 状态异常: {stats}")
+
+                # 检查缓存状态
+                if self.components['cache']:
+                    stats = self.components['cache'].get_cache_stats()
+                    if stats['memory_cache']['utilization'] > 0.9:
+                        self.logger.warning("内存缓存使用率过高")
+
+                # 检查处理器状态
+                if self.components['processor']:
+                    stats = self.components['processor'].get_stats()
+                    if stats['active_tasks'] > self.config['parallel_processing']['max_workers'] * 2:
+                        self.logger.warning("活动任务数量过多")
+
+                await asyncio.sleep(60)  # 每分钟检查一次
+            except Exception as e:
+                self.logger.error(f"健康检查失败: {str(e)}")
+                await asyncio.sleep(10)
+
+    def _setup_signal_handlers(self):
+        """设置信号处理器"""
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            asyncio.get_event_loop().add_signal_handler(
+                sig,
+                lambda: asyncio.create_task(self.shutdown())
+            )
+
+    async def start(self):
+        """启动系统"""
+        self.logger.info("正在启动系统...")
+        self.is_running = True
         
-        if result['status'] == 'success':
-            print(f"\n===== {result['data']['name']} ({stock_code}) 分析结果 =====")
-            print(f"当前价格: {result['data']['last_price']}")
-            print(f"趋势分析: {result['data']['trend_analysis']['trend']} (强度: {result['data']['trend_analysis']['strength']}%)")
-            print(f"量价分析: {result['data']['volume_analysis']['status']} (量比: {result['data']['volume_analysis']['ratio']})")
+        try:
+            # 设置信号处理
+            self._setup_signal_handlers()
             
-            # 技术指标格式化 - 修复格式化错误
-            macd_value = 0
-            if isinstance(result['data']['technical_indicators'], dict):
-                if isinstance(result['data']['technical_indicators']['macd'], dict):
-                    macd_value = result['data']['technical_indicators']['macd'].get('hist', 0)
-                else:
-                    macd_value = result['data']['technical_indicators']['macd']
-            else:
-                macd_value = result['data']['technical_indicators'].get('macd', {}).get('hist', 0)
+            # 初始化组件
+            await self._initialize_components()
+            
+            # 启动健康检查
+            health_check_task = asyncio.create_task(self._health_check())
+            
+            # 预加载常用数据
+            if self.components['cache'] and self.components['data_provider']:
+                preload_symbols = self.config['data_sources']['tushare']['preload_symbols']
+                preload_tasks = []
+                for symbol in preload_symbols:
+                    task = self.components['cache'].preload_data(
+                        f"daily_{symbol}",
+                        lambda: self.components['data_provider'].get_stock_daily(symbol),
+                        self.config['data_sources']['tushare']['cache_ttl']
+                    )
+                    preload_tasks.append(task)
+                await asyncio.gather(*preload_tasks)
+                self.logger.info("数据预加载完成")
+            
+            self.logger.info("系统启动完成")
+            
+            # 保持系统运行
+            while self.is_running:
+                await asyncio.sleep(1)
                 
-            rsi_value = result['data']['trend_analysis'].get('rsi_value', 50)
+        except Exception as e:
+            self.logger.error(f"系统启动失败: {str(e)}")
+            await self.shutdown()
+            raise
+        finally:
+            if health_check_task:
+                health_check_task.cancel()
+                try:
+                    await health_check_task
+                except asyncio.CancelledError:
+                    pass
+
+    async def shutdown(self):
+        """关闭系统"""
+        if not self.is_running:
+            return
             
-            print(f"技术指标: MACD={macd_value:.3f}, RSI={rsi_value:.2f}")
-            print(f"交易建议: {result['data']['trading_advice']}")
-            return True
-        else:
-            print(f"分析失败: {result['message']}")
-            return False
-    except Exception as e:
-        print(f"分析股票时发生错误: {str(e)}")
-        traceback.print_exc()
-        return False
+        self.logger.info("正在关闭系统...")
+        self.is_running = False
+        
+        # 关闭所有组件
+        if self.components['monitor']:
+            await self.components['monitor'].stop_monitoring()
+            
+        if self.components['cache']:
+            await self.components['cache'].stop()
+            
+        if self.components['processor']:
+            await self.components['processor'].shutdown()
+            
+        self.logger.info("系统已关闭")
 
-def run_gui_mode(args):
-    """运行GUI模式"""
-    try:
-        app = QApplication(sys.argv)
-        window = StockAnalyzerApp()
-        print('成功创建主窗口实例')
-        window.show()
-        print('主窗口已触发显示事件')
-        return app.exec()
-    except Exception as e:
-        print(f'GUI初始化失败: {str(e)}')
-        traceback.print_exc()
-        return 1
-
-def main():
+async def main():
     """主函数"""
-    # 设置工作目录为脚本所在目录
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    
-    # 解析命令行参数
-    args = parse_arguments()
-    
-    # 获取API令牌
-    token = args.token or '0e65a5c636112dc9d9af5ccc93ef06c55987805b9467db0866185a10'
-    
-    # 根据参数决定运行模式
-    if args.cli:
-        print("以命令行模式运行股票分析系统")
-        if args.analyze:
-            return 0 if analyze_single_stock(args.analyze, token) else 1
-        elif args.scan:
-            print("扫描市场并推荐股票...")
-            # 创建可视化股票系统实例
-            system = VisualStockSystem(token, headless=True)
-            from stock_selector import get_all_stocks, filter_stocks
-            
-            # 获取所有股票
-            stocks = get_all_stocks()
-            if stocks.empty:
-                print("无法获取股票列表，程序终止")
-                return 1
-            
-            print(f"开始扫描分析 {len(stocks)} 只股票，请耐心等待...")
-            print("=" * 50)
-            
-            # 筛选出最符合条件的股票
-            top_stocks = filter_stocks(system, stocks, args.top)
-            
-            print("=" * 50)
-            
-            if not top_stocks:
-                print("未找到符合条件的股票，请调整筛选参数")
-                return 1
-            
-            # 打印推荐结果
-            print("\n===== 推荐股票 =====")
-            if hasattr(system, 'print_recommendations'):
-                system.print_recommendations(top_stocks)
-            else:
-                # 如果方法不存在，提供默认实现
-                print("推荐股票列表:")
-                for idx, stock in enumerate(top_stocks, 1):
-                    print(f"{idx}. {stock.get('name', 'N/A')}({stock.get('symbol', 'N/A')}): {stock.get('price', 0):.2f}元")
-                    print(f"   趋势: {stock.get('trend', 'N/A')}, 评分: {stock.get('total_score', 0):.2f}")
-                    print(f"   推荐理由: {stock.get('recommendation', 'N/A')}")
-            
-            # 如果需要添加到复盘股票池
-            if args.add_to_review:
-                review_system = StockReview(token)
-                count = review_system.add_recommendations_to_pool(top_stocks)
-                print(f"已添加 {count} 只强烈推荐买入的股票到复盘池")
-            
-            return 0
-        elif args.review:
-            # 运行复盘模块
-            print("运行股票复盘模块...")
-            from stock_review import main as run_stock_review
-            run_stock_review()
-            return 0
-        elif args.backtest_review:
-            # 回测复盘股票池
-            print("回测复盘股票池...")
-            review_system = StockReview(token)
-            results = review_system.backtest_review_pool()
-            if results:
-                print("\n===== 回测结果 =====")
-                print(f"总收益率: {results['total_return']}%")
-                print(f"年化收益率: {results['annual_return']}%")
-                print(f"最大回撤: {results['max_drawdown']}%")
-                print(f"夏普比率: {results['sharpe_ratio']}")
-            return 0
-        else:
-            print("请指定要执行的操作: --scan, --analyze STOCK_CODE, --review 或 --backtest-review")
-            return 1
-    else:
-        # 默认运行GUI模式
-        print("以GUI模式运行股票分析系统")
-        return run_gui_mode(args)
-
-if __name__ == '__main__':
+    system = SystemManager()
     try:
-        sys.exit(main())
+        await system.start()
     except KeyboardInterrupt:
-        print("\n程序被用户中断")
-        sys.exit(0)
+        await system.shutdown()
     except Exception as e:
-        print(f"程序运行出错: {str(e)}")
-        traceback.print_exc()
-        sys.exit(1)
+        logging.error(f"系统运行错误: {str(e)}")
+        await system.shutdown()
+        raise
+
+if __name__ == "__main__":
+    asyncio.run(main())

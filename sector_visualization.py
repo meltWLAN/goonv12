@@ -12,6 +12,12 @@ from datetime import datetime, timedelta
 import os
 import platform
 
+
+# Fix Chinese font display
+import matplotlib.pyplot as plt
+plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial', 'Helvetica', 'sans-serif']
+plt.rcParams['axes.unicode_minus'] = False
+
 # 根据操作系统设置合适的中文字体
 def set_chinese_font():
     system = platform.system()
@@ -473,7 +479,7 @@ class SectorVisualizationDialog(QDialog):
                         rotation_status = prediction_data[i].get('rotation_status', '')
                         if rotation_status == '即将轮动':
                             ax.text(width + 15, bar.get_y() + bar.get_height()/2, 
-                                    '⭐', ha='center', va='center', fontsize=14, color='#FFD700')
+                                    '*', ha='center', va='center', fontsize=14, color='#FFD700')
                     
                     # 设置图表属性
                     ax.set_title('行业预测结果', fontsize=16, fontweight='bold')
@@ -493,7 +499,7 @@ class SectorVisualizationDialog(QDialog):
                                 bbox=dict(facecolor='white', alpha=0.8, boxstyle='round,pad=0.5'))
                     
                     # 添加图例说明
-                    ax.text(0.02, 0.96, '⭐ 表示行业轮动分析预测即将进入景气周期',
+                    ax.text(0.02, 0.96, '* 表示行业轮动分析预测即将进入景气周期',
                             transform=ax.transAxes, fontsize=9,
                             bbox=dict(facecolor='#FFFFCC', alpha=0.5, boxstyle='round,pad=0.3'))
                     

@@ -144,16 +144,6 @@ class EnhancedStockReview(StockReview):
             logger.error(f"启动自动跟踪失败: {str(e)}")
             return False
     
-    def _tracking_worker(self):
-        """跟踪工作线程"""
-        while not self.stop_tracking:
-            try:
-                self._check_all_stocks()
-                time.sleep(self.tracking_interval)
-            except Exception as e:
-                logger.error(f"跟踪检查出错: {str(e)}")
-                time.sleep(60)  # 出错后等待1分钟再重试
-    
     def _check_all_stocks(self):
         """检查所有跟踪中的股票"""
         for stock in self.enhanced_review_data['stocks']:
@@ -186,7 +176,7 @@ class EnhancedStockReview(StockReview):
                         'reason': '触发止盈止损',
                         'current_price': current_price
                     })
-            
+        
         except Exception as e:
             logger.error(f"检查股票{stock['symbol']}时出错: {str(e)}")
     
@@ -206,21 +196,6 @@ class EnhancedStockReview(StockReview):
         
         # 输出日志
         logger.info(f"生成{alert_type}提醒: {stock['name']}({stock['symbol']})")
-    
-    def stop_auto_tracking(self):
-        """停止自动跟踪功能"""
-        if not self.auto_tracking_enabled:
-            logger.info("自动跟踪功能未启动")
-            return False
-        
-        self.stop_tracking = True
-        self.auto_tracking_enabled = False
-        
-        if self.tracking_thread and self.tracking_thread.is_alive():
-            self.tracking_thread.join(timeout=5)
-        
-        logger.info("自动跟踪功能已停止")
-        return True
     
     def _tracking_worker(self):
         """跟踪工作线程"""
@@ -374,8 +349,61 @@ class EnhancedStockReview(StockReview):
                 logger.warning("数据量不足，无法计算完整技术指标")
                 return indicators
             
+            # 标准化列名 - 兼容中英文列名
+            column_map = {
+                '收盘': ['close', 'Close', '收盘价', '收市价'],
+                '开盘': ['open', 'Open', '开盘价'],
+                '最高': ['high', 'High', '最高价', '高'],
+                '最低': ['low', 'Low', '最低价', '低'],
+                '成交量': ['volume', 'Volume', 'vol', 'Vol', '成交量', '交易量']
+            }
+            
+            # 创建标准化的数据副本
+            std_data = data.copy()
+            
+            # 检查并处理列名
+            for std_col, possible_cols in column_map.items():
+                if std_col not in std_data.columns:
+                    for col in possible_cols:
+                        if col in std_data.columns:
+                            std_data[std_col] = std_data[col]
+                            break
+            
+            # 如果还是找不到关键列，则创建
+            if '收盘' not in std_data.columns:
+                for col in std_data.columns:
+                    if 'close' in col.lower() or '收' in col or '价' in col:
+                        std_data['收盘'] = std_data[col]
+                        logger.info(f"使用 {col} 列作为收盘价")
+                        break
+                if '收盘' not in std_data.columns:
+                    logger.warning("找不到收盘价列，使用第一个数值列")
+                    for col in std_data.columns:
+                        if pd.api.types.is_numeric_dtype(std_data[col]):
+                            std_data['收盘'] = std_data[col]
+                            logger.info(f"使用 {col} 列作为收盘价")
+                            break
+            
+            if '成交量' not in std_data.columns:
+                for col in std_data.columns:
+                    if 'vol' in col.lower() or '量' in col:
+                        std_data['成交量'] = std_data[col]
+                        logger.info(f"使用 {col} 列作为成交量")
+                        break
+                if '成交量' not in std_data.columns:
+                    logger.warning("找不到成交量列，创建虚拟数据")
+                    std_data['成交量'] = np.ones(len(std_data)) * 1000
+            
+            if '最高' not in std_data.columns and '收盘' in std_data.columns:
+                logger.warning("找不到最高价列，使用收盘价代替")
+                std_data['最高'] = std_data['收盘'] * 1.01
+            
+            if '最低' not in std_data.columns and '收盘' in std_data.columns:
+                logger.warning("找不到最低价列，使用收盘价代替")
+                std_data['最低'] = std_data['收盘'] * 0.99
+            
             # 计算MACD
-            close = data['收盘']
+            close = std_data['收盘']
             ema12 = close.ewm(span=12, adjust=False).mean()
             ema26 = close.ewm(span=26, adjust=False).mean()
             macd = ema12 - ema26
@@ -408,8 +436,8 @@ class EnhancedStockReview(StockReview):
             }
             
             # 计算KDJ
-            low_list = data['最低'].rolling(9, min_periods=9).min()
-            high_list = data['最高'].rolling(9, min_periods=9).max()
+            low_list = std_data['最低'].rolling(9, min_periods=9).min()
+            high_list = std_data['最高'].rolling(9, min_periods=9).max()
             rsv = (close - low_list) / (high_list - low_list) * 100
             k = pd.DataFrame(rsv).ewm(com=2).mean()
             d = pd.DataFrame(k).ewm(com=2).mean()
@@ -459,7 +487,7 @@ class EnhancedStockReview(StockReview):
             }
             
             # 计算成交量指标
-            volume = data['成交量']
+            volume = std_data['成交量']
             volume_ma5 = volume.rolling(window=5).mean()
             volume_ma20 = volume.rolling(window=20).mean()
             
@@ -480,6 +508,8 @@ class EnhancedStockReview(StockReview):
             
         except Exception as e:
             logger.error(f"计算技术指标时出错: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return {}
     
     def _calculate_overall_score(self, indicators):
@@ -565,6 +595,28 @@ class EnhancedStockReview(StockReview):
         
         # 限制分数范围
         return max(0, min(100, score))
+    
+    def _get_market_sentiment_weight(self):
+        """获取市场情绪权重
+        根据市场情绪状态返回权重系数，用于调整技术指标评分
+        """
+        # 获取市场情绪
+        market_sentiment = self.get_market_sentiment()
+        status = market_sentiment.get('status', '中性')
+        
+        # 根据市场情绪状态返回权重
+        if status == '极度乐观':
+            return 1.2  # 市场极度乐观时，技术指标信号可信度增强
+        elif status == '乐观':
+            return 1.1
+        elif status == '中性':
+            return 1.0  # 市场中性时，技术指标维持正常权重
+        elif status == '悲观':
+            return 0.9
+        elif status == '极度悲观':
+            return 0.8  # 市场极度悲观时，技术指标信号可信度降低
+        else:
+            return 1.0  # 默认为正常权重
     
     def _check_buy_signals(self, indicators):
         """检查买入信号"""
@@ -712,39 +764,73 @@ class EnhancedStockReview(StockReview):
         """获取增强版复盘股票池，包含更丰富的股票信息"""
         try:
             stocks = self.enhanced_review_data.get('stocks', [])
+            # 添加调试信息
+            logger.info(f"调试: 原始增强版复盘池中股票数量: {len(stocks)}")
+            logger.info(f"调试: 股票状态过滤条件: {status}")
+            
             result = []
             
             for stock in stocks:
-                if status is None or stock.get('status') == status:
-                    # 获取最新行情数据
-                    latest_data = self.visual_system.get_stock_data(stock['symbol'], limit=20)
-                    if latest_data is not None and not latest_data.empty:
-                        # 计算最新技术指标
-                        indicators = self._calculate_indicators(latest_data)
-                        
-                        # 更新市场情绪
-                        self._update_market_sentiment()
-                        
-                        # 扩展股票信息
-                        stock_info = {
-                            **stock,
-                            'current_price': latest_data['收盘'].iloc[-1],
-                            'price_change': round((latest_data['收盘'].iloc[-1] - latest_data['收盘'].iloc[-2]) / latest_data['收盘'].iloc[-2] * 100, 2),
-                            'volume_ratio': round(latest_data['成交量'].iloc[-1] / latest_data['成交量'].iloc[-5:].mean(), 2),
-                            'macd_signal': indicators.get('MACD', {}).get('signal', '中性'),
-                            'rsi_value': indicators.get('RSI', {}).get('value', 50),
-                            'kdj_signal': indicators.get('KDJ', {}).get('signal', '中性'),
-                            'boll_position': indicators.get('BOLL', {}).get('position', '中轨'),
-                            'ma_trend': indicators.get('MA', {}).get('trend', '盘整'),
-                            'volume_analysis': indicators.get('VOL', {}).get('signal', '成交量正常'),
-                            'market_sentiment': self.market_sentiment_cache.get('status', '未知'),
-                            'industry_trend': self._get_industry_trend(stock['symbol']),
-                            'signal_strength': indicators.get('overall_score', 50),
-                            'last_update_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                        }
-                        result.append(stock_info)
-                    else:
-                        result.append(stock)
+                try:
+                    # 添加调试信息
+                    logger.info(f"调试: 处理股票 {stock.get('symbol', 'unknown')}, 状态: {stock.get('status', 'unknown')}")
+                    
+                    if status is None or stock.get('status') == status:
+                        # 获取最新行情数据
+                        latest_data = self.visual_system.get_stock_data(stock['symbol'], limit=20)
+                        if latest_data is not None and len(latest_data) > 0:  # 修改这里，使用len()代替.empty
+                            # 计算最新技术指标
+                            indicators = self._calculate_indicators(latest_data)
+                            
+                            # 更新市场情绪
+                            self._update_market_sentiment()
+                            
+                            # 安全获取收盘价和成交量
+                            try:
+                                last_close = latest_data['收盘'].iloc[-1]
+                                prev_close = latest_data['收盘'].iloc[-2]
+                                price_change = round((last_close - prev_close) / prev_close * 100, 2)
+                            except (KeyError, IndexError):
+                                last_close = 0
+                                price_change = 0
+                                
+                            try:
+                                volume = latest_data['成交量'].iloc[-1]
+                                volume_avg = latest_data['成交量'].iloc[-5:].mean()
+                                volume_ratio = round(volume / volume_avg, 2) if volume_avg > 0 else 1.0
+                            except (KeyError, IndexError):
+                                volume = 0
+                                volume_ratio = 1.0
+                            
+                            # 扩展股票信息
+                            stock_info = {
+                                **stock,
+                                'current_price': last_close,
+                                'price_change': price_change,
+                                'volume_ratio': volume_ratio,
+                                'macd_signal': indicators.get('MACD', {}).get('signal', 0),
+                                'rsi_value': indicators.get('RSI', {}).get('value', 50),
+                                'kdj_signal': indicators.get('KDJ', {}).get('signal', '中性'),
+                                'boll_position': indicators.get('BOLL', {}).get('position', 0.5),
+                                'ma_trend': indicators.get('MA', {}).get('trend', '盘整'),
+                                'volume_analysis': indicators.get('VOL', {}).get('signal', '成交量正常'),
+                                'market_sentiment': self.market_sentiment_cache.get('status', '未知'),
+                                'industry_trend': self._get_industry_trend(stock['symbol']),
+                                'signal_strength': indicators.get('overall_score', 50),
+                                'last_update_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                            }
+                            result.append(stock_info)
+                            logger.info(f"调试: 成功处理股票 {stock['symbol']} 的最新数据")
+                        else:
+                            logger.warning(f"调试: 无法获取股票 {stock['symbol']} 的最新数据，使用原始数据")
+                            result.append(stock)
+                except Exception as e:
+                    logger.error(f"调试: 处理股票 {stock.get('symbol', 'unknown')} 时发生错误: {str(e)}")
+                    # 仍然添加原始股票数据
+                    result.append(stock)
+            
+            # 添加调试信息
+            logger.info(f"调试: 处理后的股票数量: {len(result)}")
             
             # 按信号强度排序
             result.sort(key=lambda x: x.get('signal_strength', 0), reverse=True)
@@ -752,7 +838,13 @@ class EnhancedStockReview(StockReview):
             
         except Exception as e:
             logger.error(f"获取增强版复盘池数据时出错: {str(e)}")
-            return []
+            # 直接返回原始数据，避免空结果
+            try:
+                logger.info("调试: 尝试直接返回原始增强版复盘池数据")
+                return self.enhanced_review_data.get('stocks', [])
+            except:
+                logger.error("调试: 直接返回原始数据也失败了")
+                return []
     
     def _get_industry_trend(self, symbol):
         """获取行业趋势"""
@@ -1442,3 +1534,117 @@ class EnhancedStockReview(StockReview):
                 status.append('成交量跌破')
         
         return '、'.join(status)
+
+    def add_recommendations_to_pool(self, recommendations):
+        """将推荐的股票添加到增强版复盘池
+        
+        Args:
+            recommendations: 推荐股票列表，每个元素应包含symbol, name, recommendation等信息
+            
+        Returns:
+            添加的股票数量
+        """
+        # 先调用父类方法，将股票添加到基础复盘池
+        added_count = super().add_recommendations_to_pool(recommendations)
+        
+        # 再添加到增强版复盘池
+        today = datetime.now().strftime("%Y-%m-%d")
+        enhanced_count = 0
+        
+        # 筛选出强烈推荐买入的股票
+        for rec in recommendations:
+            if isinstance(rec, dict) and rec.get('recommendation') == '强烈推荐买入':
+                # 获取股票数据以计算技术指标
+                try:
+                    # 获取股票数据
+                    stock_data = self.visual_system.get_stock_data(rec['symbol'], limit=60)
+                    if stock_data is None or stock_data.empty:
+                        logger.error(f"获取股票 {rec['symbol']} 数据失败")
+                        continue
+                    
+                    # 计算技术指标
+                    indicators = self._calculate_indicators(stock_data)
+                    
+                    # 检查买入信号
+                    buy_signals = self._check_buy_signals(indicators)
+                    
+                    # 获取市场情绪
+                    self._update_market_sentiment()
+                    market_status = self.market_sentiment_cache.get('status', '未知')
+                    
+                    # 创建股票记录
+                    stock_record = {
+                        'symbol': rec['symbol'],
+                        'name': rec.get('name', ''),
+                        'date_added': today,
+                        'status': 'watching',
+                        'buy_price': None,
+                        'sell_price': None,
+                        'buy_date': None,
+                        'sell_date': None,
+                        'profit_percent': None,
+                        'holding_days': None,
+                        'notes': '',
+                        'source': rec.get('source', '全市场分析'),
+                        'analysis_score': rec.get('score', indicators.get('overall_score', 0)),
+                        'market_status': market_status,
+                        'technical_indicators': indicators,
+                        'buy_signals': buy_signals,
+                        'last_update': today,
+                        'price_history': [{
+                            'date': today,
+                            'price': stock_data['收盘'].iloc[-1] if '收盘' in stock_data.columns else 0,
+                            'volume': stock_data['成交量'].iloc[-1] if '成交量' in stock_data.columns else 0
+                        }]
+                    }
+                    
+                    # 检查是否已存在，如果存在则更新
+                    exists = False
+                    for i, stock in enumerate(self.enhanced_review_data['stocks']):
+                        if stock['symbol'] == rec['symbol']:
+                            self.enhanced_review_data['stocks'][i] = stock_record
+                            exists = True
+                            break
+                    
+                    if not exists:
+                        self.enhanced_review_data['stocks'].append(stock_record)
+                        enhanced_count += 1
+                        
+                except Exception as e:
+                    logger.error(f"处理股票 {rec['symbol']} 时出错: {str(e)}")
+                    continue
+        
+        # 保存增强版复盘池
+        self._save_enhanced_data()
+        
+        logger.info(f"已添加 {enhanced_count} 只股票到增强版复盘池")
+        return added_count
+
+    def stop_auto_tracking(self):
+        """停止自动跟踪功能"""
+        if not self.auto_tracking_enabled:
+            logger.info("自动跟踪功能未启动")
+            return False
+        
+        self.stop_tracking = True
+        self.auto_tracking_enabled = False
+        
+        if self.tracking_thread and self.tracking_thread.is_alive():
+            self.tracking_thread.join(timeout=5)
+        
+        logger.info("自动跟踪功能已停止")
+        return True
+    
+    def get_review_pool(self, status=None):
+        """获取复盘池中的所有股票 (兼容基础复盘接口)"""
+        try:
+            stocks = self.enhanced_review_data.get('stocks', [])
+            
+            # 如果指定了状态，过滤股票
+            if status:
+                stocks = [s for s in stocks if s.get('status') == status]
+                
+            return stocks
+        except Exception as e:
+            logger.error(f"获取复盘池失败: {str(e)}")
+            return []

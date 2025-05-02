@@ -8,12 +8,17 @@ import pandas as pd
 from visual_stock_system import VisualStockSystem
 from single_stock_analyzer import SingleStockAnalyzer
 import sys
+import logging
 
 class StockAnalyzerApp(QMainWindow):
     def __init__(self):
         super().__init__()
         print("正在初始化股票分析系统...")
         self.token = '0e65a5c636112dc9d9af5ccc93ef06c55987805b9467db0866185a10'
+        
+        # 初始化日志
+        self.logger = logging.getLogger('StockAnalyzerApp')
+        
         try:
             self.visual_system = VisualStockSystem(self.token)
             print("成功初始化数据系统")
@@ -191,14 +196,20 @@ class StockAnalyzerApp(QMainWindow):
             # 显示前10只股票
             self.display_analysis(sorted_recommendations[:10])
             
-            # 将推荐股票添加到复盘池
+            # 将推荐股票添加到复盘池 - 使用增强版复盘模块
             try:
+                # 尝试使用增强版复盘模块
+                from enhanced_stock_review import EnhancedStockReview
+                review = EnhancedStockReview(self.token)
+                added_count = review.add_recommendations_to_pool(sorted_recommendations)
+                self.result_text.append(f'\n已添加 {added_count} 只强烈推荐买入的股票到复盘池')
+            except Exception as e:
+                # 如果增强版失败，回退到基础版
                 from stock_review import StockReview
                 review = StockReview(self.token)
                 added_count = review.add_recommendations_to_pool(sorted_recommendations)
                 self.result_text.append(f'\n已添加 {added_count} 只强烈推荐买入的股票到复盘池')
-            except Exception as e:
-                print(f'添加股票到复盘池时出错：{str(e)}')
+                self.result_text.append(f'注意: 增强版复盘模块加载失败，使用基础版: {str(e)}')
             
         except Exception as e:
             QMessageBox.warning(self, '错误', f'分析过程中出错：{str(e)}')
@@ -619,8 +630,9 @@ class StockAnalyzerApp(QMainWindow):
     def analyze_sectors(self):
         """分析热门行业"""
         try:
-            from enhanced_sector_analyzer import EnhancedSectorAnalyzer
-            analyzer = EnhancedSectorAnalyzer()
+            # 使用集成器获取行业数据
+            from integrate_sector_analyzer import SectorAnalyzerIntegrator
+            integrator = SectorAnalyzerIntegrator()
             
             # 清空之前的结果
             self.result_text.clear()
@@ -628,118 +640,43 @@ class StockAnalyzerApp(QMainWindow):
             QApplication.processEvents()
             
             # 获取当前热门行业
-            current_result = analyzer.analyze_hot_sectors()
+            current_result = integrator.get_hot_sectors()
             if current_result['status'] != 'success':
-                self.show_error_message('错误', current_result['message'])
-                return
+                raise Exception(current_result.get('message', '获取热门行业失败'))
                 
-            # 获取预测结果
-            predict_result = analyzer.predict_next_hot_sectors()
-            if predict_result['status'] != 'success':
-                self.show_error_message('错误', predict_result['message'])
-                return
+            # 获取统一分析结果
+            unified_result = integrator.get_unified_analysis()
             
-            # 获取行业轮动分析
-            rotation_data = analyzer._analyze_sector_rotation()
-            
-            # 获取可视化数据
-            viz_data = analyzer.prepare_visualization_data()
-            if viz_data['status'] != 'success':
-                self.show_error_message('警告', '可视化数据准备失败，将只显示文本分析结果')
-            
-            # 格式化输出分析结果
-            current_data = current_result['data']
-            predict_data = predict_result['data']
-            
-            output = f"""行业分析结果：
-
-当前热门行业（{current_data['update_time']}）：
-"""
-            
-            # 输出当前热门行业
-            for i, sector in enumerate(current_data['hot_sectors'], 1):
-                output += f"{i}. {sector['name']} - {sector.get('hot_level', '普通')}\n"
-                output += f"   - 涨跌幅：{sector['change_pct']:.2f}%\n"
-                output += f"   - 成交额：{sector['volume']:.2f}亿元\n"
-                output += f"   - 资金流入：{sector.get('fund_flow', 0):.2f}亿元\n"
-                output += f"   - 热度评分：{sector.get('hot_score', 0):.1f}\n"
-                if 'up_down_ratio' in sector:
-                    output += f"   - 上涨/下跌家数：{sector['up_down_ratio']}\n"
-            
-            output += f"\n北向资金净流入：{current_data['north_flow']:.2f}亿元\n"
-            output += f"市场情绪：{current_data.get('market_sentiment', '未知')}\n"
-            
-            # 输出行业轮动分析
-            output += f"\n行业轮动分析：\n"
-            output += f"当前经济周期：{rotation_data['current_cycle']}\n"
-            output += f"下一轮动周期：{rotation_data['next_cycle']}\n"
-            
-            output += f"\n预测结果（{predict_data['prediction_time']}）：\n"
-            output += f"预测周期：{predict_data['prediction_period']}\n"
-            if 'prediction_accuracy' in predict_data:
-                accuracy = predict_data['prediction_accuracy']
-                output += f"历史预测准确率：{accuracy.get('accuracy', 0)*100:.1f}%\n\n"
-            else:
-                output += "\n"
-            
-            # 输出预测的热门行业
-            for i, sector in enumerate(predict_data['predicted_sectors'], 1):
-                output += f"{i}. {sector['name']}\n"
-                output += f"   - 技术评分：{sector['technical_score']}\n"
-                output += f"   - 当前价格：{sector['current_price']}\n"
-                output += f"   - 成交额：{sector.get('volume', 0):.2f}亿元\n"
-                if 'rotation_status' in sector:
-                    output += f"   - 轮动状态：{sector['rotation_status']}\n"
-                output += f"   - 预测理由：{sector['reason']}\n"
-            
-            # 添加产业链分析
-            if len(current_data['hot_sectors']) > 0:
-                top_sector = current_data['hot_sectors'][0]
-                chain_result = analyzer.analyze_industry_chain(top_sector['name'])
-                if chain_result['status'] == 'success':
-                    chain_data = chain_result['data']
-                    output += f"\n产业链分析（{chain_data['sector_name']}）：\n"
-                    output += f"产业链联动性：{chain_data['linkage_score']:.1f}%\n\n"
-                    
-                    output += "上游行业：\n"
-                    for up in chain_data['upstream']:
-                        output += f"  - {up['name']}（{up['change_pct']:.2f}%）\n"
-                    
-                    output += "\n下游行业：\n"
-                    for down in chain_data['downstream']:
-                        output += f"  - {down['name']}（{down['change_pct']:.2f}%）\n"
-                    
-                    output += "\n相关行业：\n"
-                    for rel in chain_data['related']:
-                        output += f"  - {rel['name']}（{rel['change_pct']:.2f}%）\n"
-            
+            # 显示结果
             self.result_text.clear()
-            self.result_text.append(output)
+            self.result_text.append('==== 热门行业分析 ====')
+            self.result_text.append(f'[更新时间] {current_result["data"]["update_time"]}')
+            self.result_text.append('')
             
-            # 显示可视化界面
-            self.show_sector_visualization(viz_data)
+            # 显示热门行业列表
+            self.result_text.append('== 当前热门行业 ==')
+            for i, sector in enumerate(current_result['data']['hot_sectors'][:10], 1):
+                hot_level = sector.get('hot_level', '')
+                hot_score = sector.get('hot_score', 0)
+                self.result_text.append(f'{i}. {sector["name"]} - 热度: {hot_score:.2f} ({hot_level})')
+            
+            # 如果有技术分析数据，显示第一个行业的分析
+            if 'technical_analysis' in unified_result['data']:
+                tech = unified_result['data']['technical_analysis']
+                self.result_text.append('')
+                self.result_text.append(f'== {tech["sector"]}行业技术分析 ==')
+                self.result_text.append(f'趋势: {tech["prediction"]["trend"]}')
+                self.result_text.append(f'看多指数: {tech["prediction"]["bull_score"]}')
+                self.result_text.append(f'分析: {tech["prediction"]["analysis"]}')
+                
+            self.logger.info("行业分析完成")
             
         except Exception as e:
-            self.show_error_message('错误', f'分析行业数据时出错：{str(e)}')
             self.result_text.clear()
-            self.result_text.append(f'分析失败：{str(e)}')
+            self.result_text.append(f'分析行业数据失败: {str(e)}')
+            self.logger.error(f"分析行业数据失败: {str(e)}")
+            QMessageBox.warning(self, '错误', f'分析行业数据失败: {str(e)}')
     
-    def show_sector_visualization(self, viz_data):
-        """显示行业可视化界面"""
-        if viz_data['status'] != 'success':
-            return
-        
-        try:
-            # 使用新的行业可视化对话框
-            from sector_visualization import SectorVisualizationDialog
-            viz_dialog = SectorVisualizationDialog(self, viz_data)
-            viz_dialog.exec_()
-            
-        except Exception as e:
-            self.show_error_message('错误', f'分析行业数据时出错：{str(e)}')
-            self.result_text.clear()
-            self.result_text.append(f'分析失败：{str(e)}')
-
     def display_analysis(self, recommendations):
         self.result_text.clear()
         self.result_text.append('=== 市场分析报告 ===\n')
@@ -845,3 +782,11 @@ class StockAnalyzerApp(QMainWindow):
             
         except Exception as e:
             return f"生成分析报告时出错：{str(e)}"
+
+# 添加主入口代码
+if __name__ == "__main__":
+    import sys
+    app = QApplication(sys.argv)
+    window = StockAnalyzerApp()
+    window.show()
+    sys.exit(app.exec_())

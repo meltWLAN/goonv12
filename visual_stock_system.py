@@ -16,6 +16,12 @@ import tushare as ts
 from china_stock_provider import ChinaStockProvider
 import re
 
+
+# Fix Chinese font display
+import matplotlib.pyplot as plt
+plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial', 'Helvetica', 'sans-serif']
+plt.rcParams['axes.unicode_minus'] = False
+
 from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QTextEdit
 
 class VisualStockSystem(QMainWindow):

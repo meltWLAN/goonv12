@@ -1,0 +1,13 @@
+{
+  "data": {
+    "volatility": 15,
+    "trend": 0,
+    "up_counts": 1216,
+    "down_counts": 4110,
+    "flat_counts": 388,
+    "sentiment_score": 22.831393165602705,
+    "market_sentiment": "看空",
+    "north_flow": 0
+  },
+  "timestamp": 1745825971.413918
+}

@@ -1,0 +1,779 @@
+{
+  "data": [
+    {
+      "code": "BK1046",
+      "name": "游戏",
+      "change_pct": 1.01,
+      "price": 1101.25,
+      "volume": 0.0,
+      "turnover": 3.13,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0475",
+      "name": "银行",
+      "change_pct": 0.98,
+      "price": 3906.85,
+      "volume": 0.0,
+      "turnover": 0.24,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0734",
+      "name": "珠宝首饰",
+      "change_pct": 0.67,
+      "price": 386.75,
+      "volume": 0.0,
+      "turnover": 1.92,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0428",
+      "name": "电力行业",
+      "change_pct": 0.23,
+      "price": 16989.6,
+      "volume": 0.0,
+      "turnover": 1.85,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0479",
+      "name": "钢铁行业",
+      "change_pct": 0.15,
+      "price": 7002.26,
+      "volume": 0.0,
+      "turnover": 1.1,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0729",
+      "name": "船舶制造",
+      "change_pct": -0.27,
+      "price": 833.9,
+      "volume": 0.0,
+      "turnover": 0.95,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0421",
+      "name": "铁路公路",
+      "change_pct": -0.31,
+      "price": 8606.62,
+      "volume": 0.0,
+      "turnover": 0.56,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0450",
+      "name": "航运港口",
+      "change_pct": -0.41,
+      "price": 9539.48,
+      "volume": 0.0,
+      "turnover": 0.78,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0440",
+      "name": "家用轻工",
+      "change_pct": -0.48,
+      "price": 39625.89,
+      "volume": 0.0,
+      "turnover": 2.45,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0447",
+      "name": "互联网服务",
+      "change_pct": -0.55,
+      "price": 24503.47,
+      "volume": 0.0,
+      "turnover": 3.99,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1017",
+      "name": "采掘行业",
+      "change_pct": -0.59,
+      "price": 1082.94,
+      "volume": 0.0,
+      "turnover": 0.82,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1036",
+      "name": "半导体",
+      "change_pct": -0.64,
+      "price": 1385.76,
+      "volume": 0.0,
+      "turnover": 1.57,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0420",
+      "name": "航空机场",
+      "change_pct": -0.68,
+      "price": 4546.45,
+      "volume": 0.0,
+      "turnover": 0.49,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0735",
+      "name": "计算机设备",
+      "change_pct": -0.7,
+      "price": 1191.87,
+      "volume": 0.0,
+      "turnover": 2.18,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0486",
+      "name": "文化传媒",
+      "change_pct": -0.71,
+      "price": 9244.37,
+      "volume": 0.0,
+      "turnover": 1.67,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0427",
+      "name": "公用事业",
+      "change_pct": -0.71,
+      "price": 8084.87,
+      "volume": 0.0,
+      "turnover": 1.42,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1038",
+      "name": "光学光电子",
+      "change_pct": -0.78,
+      "price": 1370.59,
+      "volume": 0.0,
+      "turnover": 1.25,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0424",
+      "name": "水泥建材",
+      "change_pct": -0.81,
+      "price": 23566.3,
+      "volume": 0.0,
+      "turnover": 1.26,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0730",
+      "name": "农药兽药",
+      "change_pct": -0.83,
+      "price": 1025.26,
+      "volume": 0.0,
+      "turnover": 2.94,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0478",
+      "name": "有色金属",
+      "change_pct": -0.85,
+      "price": 16213.99,
+      "volume": 0.0,
+      "turnover": 1.49,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0464",
+      "name": "石油行业",
+      "change_pct": -0.87,
+      "price": 5183.84,
+      "volume": 0.0,
+      "turnover": 0.26,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0538",
+      "name": "化学制品",
+      "change_pct": -0.92,
+      "price": 23543.54,
+      "volume": 0.0,
+      "turnover": 2.71,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1019",
+      "name": "化学原料",
+      "change_pct": -0.94,
+      "price": 802.63,
+      "volume": 0.0,
+      "turnover": 1.77,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1027",
+      "name": "小金属",
+      "change_pct": -0.95,
+      "price": 1920.56,
+      "volume": 0.0,
+      "turnover": 1.46,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0732",
+      "name": "贵金属",
+      "change_pct": -1.01,
+      "price": 1351.15,
+      "volume": 0.0,
+      "turnover": 2.01,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0477",
+      "name": "酿酒行业",
+      "change_pct": -1.02,
+      "price": 48182.15,
+      "volume": 0.0,
+      "turnover": 1.16,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1028",
+      "name": "燃气",
+      "change_pct": -1.04,
+      "price": 1459.69,
+      "volume": 0.0,
+      "turnover": 0.84,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0470",
+      "name": "造纸印刷",
+      "change_pct": -1.09,
+      "price": 8409.03,
+      "volume": 0.0,
+      "turnover": 1.73,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1044",
+      "name": "生物制品",
+      "change_pct": -1.09,
+      "price": 850.11,
+      "volume": 0.0,
+      "turnover": 1.61,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1034",
+      "name": "电源设备",
+      "change_pct": -1.15,
+      "price": 1869.15,
+      "volume": 0.0,
+      "turnover": 2.63,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1037",
+      "name": "消费电子",
+      "change_pct": -1.15,
+      "price": 1350.91,
+      "volume": 0.0,
+      "turnover": 1.63,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1042",
+      "name": "医药商业",
+      "change_pct": -1.16,
+      "price": 952.82,
+      "volume": 0.0,
+      "turnover": 1.06,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0459",
+      "name": "电子元件",
+      "change_pct": -1.16,
+      "price": 22257.31,
+      "volume": 0.0,
+      "turnover": 1.94,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0473",
+      "name": "证券",
+      "change_pct": -1.18,
+      "price": 131172.91,
+      "volume": 0.0,
+      "turnover": 0.64,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0436",
+      "name": "纺织服装",
+      "change_pct": -1.2,
+      "price": 10467.34,
+      "volume": 0.0,
+      "turnover": 1.92,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0474",
+      "name": "保险",
+      "change_pct": -1.21,
+      "price": 1326.7,
+      "volume": 0.0,
+      "turnover": 0.27,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1040",
+      "name": "中药",
+      "change_pct": -1.22,
+      "price": 1286.47,
+      "volume": 0.0,
+      "turnover": 1.42,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1032",
+      "name": "风电设备",
+      "change_pct": -1.22,
+      "price": 1050.96,
+      "volume": 0.0,
+      "turnover": 2.9,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1015",
+      "name": "能源金属",
+      "change_pct": -1.26,
+      "price": 429.89,
+      "volume": 0.0,
+      "turnover": 1.27,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0728",
+      "name": "环保行业",
+      "change_pct": -1.27,
+      "price": 400.4,
+      "volume": 0.0,
+      "turnover": 2.11,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0429",
+      "name": "交运设备",
+      "change_pct": -1.32,
+      "price": 9180.81,
+      "volume": 0.0,
+      "turnover": 0.76,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1039",
+      "name": "电子化学品",
+      "change_pct": -1.33,
+      "price": 1549.82,
+      "volume": 0.0,
+      "turnover": 3.56,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0737",
+      "name": "软件开发",
+      "change_pct": -1.36,
+      "price": 1021.85,
+      "volume": 0.0,
+      "turnover": 3.07,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0465",
+      "name": "化学制药",
+      "change_pct": -1.37,
+      "price": 28520.44,
+      "volume": 0.0,
+      "turnover": 2.28,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1031",
+      "name": "光伏设备",
+      "change_pct": -1.48,
+      "price": 932.02,
+      "volume": 0.0,
+      "turnover": 1.33,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0454",
+      "name": "塑料制品",
+      "change_pct": -1.48,
+      "price": 13361.57,
+      "volume": 0.0,
+      "turnover": 3.55,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0910",
+      "name": "专用设备",
+      "change_pct": -1.49,
+      "price": 2433.93,
+      "volume": 0.0,
+      "turnover": 2.63,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0727",
+      "name": "医疗服务",
+      "change_pct": -1.5,
+      "price": 937.73,
+      "volume": 0.0,
+      "turnover": 1.95,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0736",
+      "name": "通信服务",
+      "change_pct": -1.53,
+      "price": 1024.99,
+      "volume": 0.0,
+      "turnover": 0.61,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0740",
+      "name": "教育",
+      "change_pct": -1.57,
+      "price": 603.73,
+      "volume": 0.0,
+      "turnover": 2.9,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0546",
+      "name": "玻璃玻纤",
+      "change_pct": -1.61,
+      "price": 32710.44,
+      "volume": 0.0,
+      "turnover": 1.3,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0731",
+      "name": "化肥行业",
+      "change_pct": -1.62,
+      "price": 1307.56,
+      "volume": 0.0,
+      "turnover": 1.64,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1033",
+      "name": "电池",
+      "change_pct": -1.64,
+      "price": 881.02,
+      "volume": 0.0,
+      "turnover": 1.32,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0539",
+      "name": "综合行业",
+      "change_pct": -1.65,
+      "price": 9595.42,
+      "volume": 0.0,
+      "turnover": 1.62,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0480",
+      "name": "航天航空",
+      "change_pct": -1.66,
+      "price": 41251.82,
+      "volume": 0.0,
+      "turnover": 1.1,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1018",
+      "name": "橡胶制品",
+      "change_pct": -1.66,
+      "price": 1336.79,
+      "volume": 0.0,
+      "turnover": 1.7,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1020",
+      "name": "非金属材料",
+      "change_pct": -1.66,
+      "price": 1180.09,
+      "volume": 0.0,
+      "turnover": 1.86,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0458",
+      "name": "仪器仪表",
+      "change_pct": -1.67,
+      "price": 15651.61,
+      "volume": 0.0,
+      "turnover": 2.88,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1029",
+      "name": "汽车整车",
+      "change_pct": -1.68,
+      "price": 1578.81,
+      "volume": 0.0,
+      "turnover": 1.41,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0448",
+      "name": "通信设备",
+      "change_pct": -1.69,
+      "price": 12564.93,
+      "volume": 0.0,
+      "turnover": 2.61,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0481",
+      "name": "汽车零部件",
+      "change_pct": -1.72,
+      "price": 37033.26,
+      "volume": 0.0,
+      "turnover": 2.4,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1030",
+      "name": "电机",
+      "change_pct": -1.74,
+      "price": 2018.78,
+      "volume": 0.0,
+      "turnover": 4.12,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0457",
+      "name": "电网设备",
+      "change_pct": -1.75,
+      "price": 24819.3,
+      "volume": 0.0,
+      "turnover": 2.01,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0456",
+      "name": "家电行业",
+      "change_pct": -1.75,
+      "price": 20280.82,
+      "volume": 0.0,
+      "turnover": 1.94,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0545",
+      "name": "通用设备",
+      "change_pct": -1.75,
+      "price": 33933.13,
+      "volume": 0.0,
+      "turnover": 2.83,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0738",
+      "name": "多元金融",
+      "change_pct": -1.76,
+      "price": 530.43,
+      "volume": 0.0,
+      "turnover": 1.14,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0725",
+      "name": "装修装饰",
+      "change_pct": -1.78,
+      "price": 501.03,
+      "volume": 0.0,
+      "turnover": 2.05,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1016",
+      "name": "汽车服务",
+      "change_pct": -1.83,
+      "price": 950.31,
+      "volume": 0.0,
+      "turnover": 2.55,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0425",
+      "name": "工程建设",
+      "change_pct": -1.85,
+      "price": 21223.27,
+      "volume": 0.0,
+      "turnover": 0.68,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0422",
+      "name": "物流行业",
+      "change_pct": -1.92,
+      "price": 6511.39,
+      "volume": 0.0,
+      "turnover": 1.36,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0433",
+      "name": "农牧饲渔",
+      "change_pct": -1.95,
+      "price": 13469.87,
+      "volume": 0.0,
+      "turnover": 2.12,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1041",
+      "name": "医疗器械",
+      "change_pct": -1.95,
+      "price": 772.34,
+      "volume": 0.0,
+      "turnover": 1.7,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0739",
+      "name": "工程机械",
+      "change_pct": -1.96,
+      "price": 1700.73,
+      "volume": 0.0,
+      "turnover": 1.18,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0437",
+      "name": "煤炭行业",
+      "change_pct": -1.98,
+      "price": 9713.18,
+      "volume": 0.0,
+      "turnover": 0.8,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1035",
+      "name": "美容护理",
+      "change_pct": -2.01,
+      "price": 876.72,
+      "volume": 0.0,
+      "turnover": 4.66,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0484",
+      "name": "贸易行业",
+      "change_pct": -2.08,
+      "price": 9312.0,
+      "volume": 0.0,
+      "turnover": 3.21,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1043",
+      "name": "专业服务",
+      "change_pct": -2.18,
+      "price": 1188.33,
+      "volume": 0.0,
+      "turnover": 2.45,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0471",
+      "name": "化纤行业",
+      "change_pct": -2.18,
+      "price": 13532.01,
+      "volume": 0.0,
+      "turnover": 1.15,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0733",
+      "name": "包装材料",
+      "change_pct": -2.2,
+      "price": 958.09,
+      "volume": 0.0,
+      "turnover": 2.42,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0482",
+      "name": "商业百货",
+      "change_pct": -2.4,
+      "price": 17159.84,
+      "volume": 0.0,
+      "turnover": 2.89,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0476",
+      "name": "装修建材",
+      "change_pct": -2.45,
+      "price": 11673.28,
+      "volume": 0.0,
+      "turnover": 2.5,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0726",
+      "name": "工程咨询服务",
+      "change_pct": -2.59,
+      "price": 681.46,
+      "volume": 0.0,
+      "turnover": 3.03,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0485",
+      "name": "旅游酒店",
+      "change_pct": -2.96,
+      "price": 14801.93,
+      "volume": 0.0,
+      "turnover": 5.19,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0438",
+      "name": "食品饮料",
+      "change_pct": -3.12,
+      "price": 26726.64,
+      "volume": 0.0,
+      "turnover": 2.88,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK0451",
+      "name": "房地产开发",
+      "change_pct": -3.55,
+      "price": 11605.23,
+      "volume": 0.0,
+      "turnover": 2.15,
+      "source": "eastmoney"
+    },
+    {
+      "code": "BK1045",
+      "name": "房地产服务",
+      "change_pct": -3.65,
+      "price": 1072.18,
+      "volume": 0.0,
+      "turnover": 5.8,
+      "source": "eastmoney"
+    }
+  ],
+  "timestamp": 1745825814.280415
+}

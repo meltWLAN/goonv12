@@ -1,0 +1,79 @@
+{
+  "status": "success",
+  "data": {
+    "hot_sectors": [
+      {
+        "name": "电子",
+        "hot_score": 84.93,
+        "hot_level": "热门",
+        "rank": 1,
+        "analysis_reason": "市场热度高，资金关注度大"
+      },
+      {
+        "name": "计算机",
+        "hot_score": 83.52,
+        "hot_level": "热门",
+        "rank": 2,
+        "analysis_reason": "市场热度高，资金关注度大"
+      },
+      {
+        "name": "汽车",
+        "hot_score": 71.73,
+        "hot_level": "热门",
+        "rank": 5,
+        "analysis_reason": "市场热度高，资金关注度大"
+      },
+      {
+        "name": "通信",
+        "hot_score": 70.95,
+        "hot_level": "热门",
+        "rank": 3,
+        "analysis_reason": "市场热度高，资金关注度大"
+      },
+      {
+        "name": "医药生物",
+        "hot_score": 68.17,
+        "hot_level": "较热",
+        "rank": 4,
+        "analysis_reason": "市场关注度中等偏上"
+      },
+      {
+        "name": "机械设备",
+        "hot_score": 67.37,
+        "hot_level": "较热",
+        "rank": 7,
+        "analysis_reason": "市场关注度中等偏上"
+      },
+      {
+        "name": "食品饮料",
+        "hot_score": 65.75,
+        "hot_level": "较热",
+        "rank": 8,
+        "analysis_reason": "市场关注度中等偏上"
+      },
+      {
+        "name": "家用电器",
+        "hot_score": 63.98,
+        "hot_level": "较热",
+        "rank": 9,
+        "analysis_reason": "市场关注度中等偏上"
+      },
+      {
+        "name": "银行",
+        "hot_score": 61.48,
+        "hot_level": "较热",
+        "rank": 10,
+        "analysis_reason": "市场关注度中等偏上"
+      },
+      {
+        "name": "电气设备",
+        "hot_score": 59.33,
+        "hot_level": "较热",
+        "rank": 6,
+        "analysis_reason": "市场关注度中等偏上"
+      }
+    ],
+    "update_time": "2025-05-02 12:53:36",
+    "source": "simple"
+  }
+}

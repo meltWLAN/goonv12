@@ -1,0 +1,57 @@
+cache:
+  cleanup_interval: 7200
+  disk_path: ./data_cache
+  max_size: 2000
+  memory_cache_size: 200
+  strategy: lru
+data_sources:
+  akshare:
+    auto_reconnect: true
+    cache_ttl: 3600
+    enabled: true
+    error_threshold: 3
+    health_check_interval: 300
+    priority: 3
+    retry_attempts: 5
+    retry_delay: 5
+    timeout: 60
+  tushare:
+    auto_reconnect: true
+    cache_ttl: 3600
+    enabled: true
+    error_threshold: 3
+    health_check_interval: 300
+    preload_symbols:
+    - 000001.SZ
+    - 600519.SH
+    - 300750.SZ
+    priority: 1
+    retry_attempts: 3
+    retry_delay: 5
+    timeout: 30
+  web_crawler:
+    auto_reconnect: true
+    cache_ttl: 1800
+    enabled: true
+    error_threshold: 5
+    health_check_interval: 600
+    priority: 3
+    retry_attempts: 2
+    retry_delay: 10
+    timeout: 45
+health_monitor:
+  alert_threshold: 0.8
+  check_interval: 300
+  enabled: true
+  metrics_retention: 86400
+  performance_threshold: 2000
+parallel_processing:
+  chunk_size: 100
+  max_workers: 5
+  timeout: 60
+retry_strategy:
+  exponential_backoff: true
+  initial_delay: 1
+  jitter: true
+  max_attempts: 3
+  max_delay: 30

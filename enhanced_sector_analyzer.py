@@ -75,8 +75,8 @@ class EnhancedSectorAnalyzer:
         """从缓存加载数据"""
         try:
             with open(cache_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception as e:
+                    return json.load(f)
+            except Exception as e:
             self.logger.error(f"加载缓存失败: {str(e)}")
             return None
     
@@ -123,7 +123,7 @@ class EnhancedSectorAnalyzer:
                         }
                         for _, row in df_sw.iterrows()
                     ]
-            except Exception as e:
+        except Exception as e:
                 self.logger.warning(f"获取申万行业分类失败: {str(e)}")
             
             # 尝试获取中信行业分类
@@ -140,7 +140,7 @@ class EnhancedSectorAnalyzer:
                         }
                         for _, row in df_zx.iterrows()
                     ]
-            except Exception as e:
+        except Exception as e:
                 self.logger.warning(f"获取中信行业分类失败: {str(e)}")
             
             # 合并行业列表
@@ -164,7 +164,7 @@ class EnhancedSectorAnalyzer:
             
             return result
             
-        except Exception as e:
+                    except Exception as e:
             self.logger.error(f"获取行业列表失败: {str(e)}")
             return {'status': 'error', 'message': f"获取行业列表失败: {str(e)}"}
     
@@ -244,7 +244,7 @@ class EnhancedSectorAnalyzer:
                 else:
                     # 为默认行业随机生成一些股票
                     stocks = self._get_default_sector_stocks(sector_name)
-            except Exception as e:
+                except Exception as e:
                 self.logger.error(f"获取行业 {sector_name} 成分股失败: {str(e)}")
                 stocks = self._get_default_sector_stocks(sector_name)
             
@@ -316,7 +316,7 @@ class EnhancedSectorAnalyzer:
         Args:
             top_n: 返回的热门行业数量
             force_refresh: 是否强制刷新缓存
-        
+            
         Returns:
             包含热门行业的字典
         """
@@ -357,7 +357,7 @@ class EnhancedSectorAnalyzer:
                         market_trend = 'strong_bear'
                     elif latest_chg < -0.5:
                         market_trend = 'bear'
-                    else:
+                else:
                         market_trend = 'neutral'
             except Exception as e:
                 self.logger.warning(f"获取指数数据失败: {str(e)}")
@@ -375,7 +375,7 @@ class EnhancedSectorAnalyzer:
                     'name': sector_name,
                     'code': sector_code,
                     'source': sector['source'],
-                    'change_pct': 0.0,
+                        'change_pct': 0.0,
                     'volume': 0.0,
                     'turnover': 0.0,
                     'pe': 0.0,
@@ -406,14 +406,14 @@ class EnhancedSectorAnalyzer:
                             if len(df_sector) >= 5:
                                 avg_5d_vol = df_sector['vol'].iloc[1:6].mean()
                                 sector_data['vol_ratio_5d'] = latest['vol'] / avg_5d_vol if avg_5d_vol > 0 else 1.0
-                            else:
+            else:
                                 sector_data['vol_ratio_5d'] = 1.0
                 
                     # 获取行业成分股
                     stocks_result = self.get_sector_stocks(sector_name)
                     if stocks_result['status'] == 'success':
                         sector_data['stock_count'] = stocks_result['data']['total']
-                except Exception as e:
+                    except Exception as e:
                     self.logger.warning(f"获取行业 {sector_name} 指数数据失败: {str(e)}")
                 
                 # 计算热度分数 (基于涨跌幅、成交量、估值等)

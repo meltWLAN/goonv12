@@ -1,0 +1,304 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""简单的修复脚本，用于修复 evolving_backtester_part2.py 文件"""
+
+import os
+
+# 创建备份
+if os.path.exists('evolving_backtester_part2.py'):
+    print("备份原始文件...")
+    try:
+        with open('evolving_backtester_part2.py.bak', 'w', encoding='utf-8') as f:
+            with open('evolving_backtester_part2.py', 'r', encoding='utf-8') as orig:
+                f.write(orig.read())
+        print("备份完成: evolving_backtester_part2.py.bak")
+    except Exception as e:
+        print(f"备份文件失败: {e}")
+
+# 文件头部
+header = """from typing import Dict, List, Optional, Tuple, Any, Union
+import pandas as pd
+import numpy as np
+import logging
+from datetime import datetime
+import json
+import os
+
+# 导入模型管理器
+from evolving_backtester import ModelManager
+
+# 配置日志
+logger = logging.getLogger('EvolvingBacktester')
+
+"""
+
+# 类定义
+class_defs = """class AdvancedTradeRecord:
+    \"\"\"高级交易记录，包含交易的详细信息\"\"\"
+    
+    def __init__(self, 
+                 symbol: str, 
+                 entry_time: datetime, 
+                 entry_price: float, 
+                 position_size: float, 
+                 exit_time: Optional[datetime] = None, 
+                 exit_price: Optional[float] = None,
+                 profit_loss: Optional[float] = None,
+                 stop_loss: Optional[float] = None,
+                 take_profit: Optional[float] = None,
+                 risk_reward_ratio: Optional[float] = None,
+                 position_ratio: Optional[float] = None,
+                 features: Optional[Dict] = None,
+                 trade_signals: Optional[Dict] = None):
+        \"\"\"初始化交易记录\"\"\"
+        self.symbol = symbol
+        self.entry_time = entry_time
+        self.entry_price = entry_price
+        self.position_size = position_size
+        self.exit_time = exit_time
+        self.exit_price = exit_price
+        self.profit_loss = profit_loss
+        self.stop_loss = stop_loss
+        self.take_profit = take_profit
+        self.risk_reward_ratio = risk_reward_ratio
+        self.position_ratio = position_ratio
+        self.features = features or {}
+        self.trade_signals = trade_signals or {}
+        
+    def to_dict(self) -> Dict:
+        \"\"\"转换为字典\"\"\"
+        return {
+            'symbol': self.symbol,
+            'entry_time': self.entry_time.strftime('%Y-%m-%d %H:%M:%S') if self.entry_time else None,
+            'entry_price': self.entry_price,
+            'position_size': self.position_size,
+            'exit_time': self.exit_time.strftime('%Y-%m-%d %H:%M:%S') if self.exit_time else None,
+            'exit_price': self.exit_price,
+            'profit_loss': self.profit_loss,
+            'stop_loss': self.stop_loss,
+            'take_profit': self.take_profit,
+            'risk_reward_ratio': self.risk_reward_ratio,
+            'position_ratio': self.position_ratio,
+            'features': self.features,
+            'trade_signals': self.trade_signals
+        }
+        
+    @classmethod
+    def from_dict(cls, data: Dict) -> 'AdvancedTradeRecord':
+        \"\"\"从字典创建交易记录\"\"\"
+        entry_time = datetime.strptime(data['entry_time'], '%Y-%m-%d %H:%M:%S') if data.get('entry_time') else None
+        exit_time = datetime.strptime(data['exit_time'], '%Y-%m-%d %H:%M:%S') if data.get('exit_time') else None
+        
+        return cls(
+            symbol=data['symbol'],
+            entry_time=entry_time,
+            entry_price=data['entry_price'],
+            position_size=data['position_size'],
+            exit_time=exit_time,
+            exit_price=data.get('exit_price'),
+            profit_loss=data.get('profit_loss'),
+            stop_loss=data.get('stop_loss'),
+            take_profit=data.get('take_profit'),
+            risk_reward_ratio=data.get('risk_reward_ratio'),
+            position_ratio=data.get('position_ratio'),
+            features=data.get('features', {}),
+            trade_signals=data.get('trade_signals', {})
+        )
+        
+class AdvancedBacktestResult:
+    \"\"\"高级回测结果，包含详细的回测统计信息\"\"\"
+    
+    def __init__(self,
+                 trades: List[AdvancedTradeRecord],
+                 initial_capital: float,
+                 final_capital: float,
+                 start_time: datetime,
+                 end_time: datetime,
+                 win_rate: Optional[float] = None,
+                 avg_profit: Optional[float] = None,
+                 avg_loss: Optional[float] = None,
+                 max_drawdown: Optional[float] = None,
+                 sharpe_ratio: Optional[float] = None,
+                 profit_factor: Optional[float] = None,
+                 total_trades: Optional[int] = None,
+                 winning_trades: Optional[int] = None,
+                 losing_trades: Optional[int] = None,
+                 strategy_params: Optional[Dict] = None,
+                 equity_curve: Optional[List[Tuple[datetime, float]]] = None,
+                 market_performance: Optional[Dict] = None):
+        \"\"\"初始化回测结果\"\"\"
+        self.trades = trades
+        self.initial_capital = initial_capital
+        self.final_capital = final_capital
+        self.start_time = start_time
+        self.end_time = end_time
+        self.win_rate = win_rate
+        self.avg_profit = avg_profit
+        self.avg_loss = avg_loss
+        self.max_drawdown = max_drawdown
+        self.sharpe_ratio = sharpe_ratio
+        self.profit_factor = profit_factor
+        self.total_trades = total_trades or len(trades)
+        self.winning_trades = winning_trades
+        self.losing_trades = losing_trades
+        self.strategy_params = strategy_params or {}
+        self.equity_curve = equity_curve or []
+        self.market_performance = market_performance or {}
+        
+    def to_dict(self) -> Dict:
+        \"\"\"转换为字典\"\"\"
+        return {
+            'initial_capital': self.initial_capital,
+            'final_capital': self.final_capital,
+            'start_time': self.start_time.strftime('%Y-%m-%d %H:%M:%S'),
+            'end_time': self.end_time.strftime('%Y-%m-%d %H:%M:%S'),
+            'win_rate': self.win_rate,
+            'avg_profit': self.avg_profit,
+            'avg_loss': self.avg_loss,
+            'max_drawdown': self.max_drawdown,
+            'sharpe_ratio': self.sharpe_ratio,
+            'profit_factor': self.profit_factor,
+            'total_trades': self.total_trades,
+            'winning_trades': self.winning_trades,
+            'losing_trades': self.losing_trades,
+            'strategy_params': self.strategy_params,
+            'trades': [t.to_dict() for t in self.trades],
+            'equity_curve': [(t.strftime('%Y-%m-%d %H:%M:%S'), v) for t, v in self.equity_curve],
+            'market_performance': self.market_performance
+        }
+        
+    @classmethod
+    def from_dict(cls, data: Dict) -> 'AdvancedBacktestResult':
+        \"\"\"从字典创建回测结果\"\"\"
+        trades = [AdvancedTradeRecord.from_dict(t) for t in data.get('trades', [])]
+        start_time = datetime.strptime(data['start_time'], '%Y-%m-%d %H:%M:%S')
+        end_time = datetime.strptime(data['end_time'], '%Y-%m-%d %H:%M:%S')
+        
+        equity_curve = []
+        for t_str, v in data.get('equity_curve', []):
+            t = datetime.strptime(t_str, '%Y-%m-%d %H:%M:%S')
+            equity_curve.append((t, v))
+        
+        return cls(
+            trades=trades,
+            initial_capital=data['initial_capital'],
+            final_capital=data['final_capital'],
+            start_time=start_time,
+            end_time=end_time,
+            win_rate=data.get('win_rate'),
+            avg_profit=data.get('avg_profit'),
+            avg_loss=data.get('avg_loss'),
+            max_drawdown=data.get('max_drawdown'),
+            sharpe_ratio=data.get('sharpe_ratio'),
+            profit_factor=data.get('profit_factor'),
+            total_trades=data.get('total_trades'),
+            winning_trades=data.get('winning_trades'),
+            losing_trades=data.get('losing_trades'),
+            strategy_params=data.get('strategy_params', {}),
+            equity_curve=equity_curve,
+            market_performance=data.get('market_performance', {})
+        )
+    
+    def save_to_file(self, filename: str):
+        \"\"\"保存回测结果到文件\"\"\"
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(self.to_dict(), f, ensure_ascii=False, indent=4)
+        
+    @classmethod
+    def load_from_file(cls, filename: str) -> 'AdvancedBacktestResult':
+        \"\"\"从文件加载回测结果\"\"\"
+        with open(filename, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return cls.from_dict(data)
+
+class EvolvingBacktester:
+    \"\"\"自进化回测器，能够通过机器学习不断优化交易策略\"\"\"
+    
+    def __init__(self, initial_capital=100000.0, model_manager=None):
+        \"\"\"初始化回测器\"\"\"
+        self.initial_capital = initial_capital
+        self.current_capital = initial_capital
+        self.model_manager = model_manager or ModelManager()
+        self.trades = []
+        self.equity_curve = []
+        self.max_position_ratio = 0.2  # 最大仓位比例
+        
+        # 自适应参数
+        self.adaptive_params = {
+            'position_size_factor': 1.0,
+            'stop_loss_factor': 1.0,
+            'take_profit_factor': 1.5,
+            'entry_threshold': 0.6,
+            'exit_threshold': 0.6,
+            'trend_factor': 1.0
+        }
+"""
+
+# 方法实现
+method_impl = """    def calculate_position_size(self, features: Dict, signal_strength: float, price: float, stop_loss: float) -> float:
+        \"\"\"计算最优仓位大小
+        
+        Args:
+            features: 特征字典
+            signal_strength: 信号强度 (0-1)
+            price: 当前价格
+            stop_loss: 止损价格
+            
+        Returns:
+            仓位比例 (0-1)，表示应该使用的总资金比例
+        \"\"\"
+        try:
+            # 如果特征不完整，使用基本方法计算
+            if not features or len(features) < 10 or self.model_manager.models['position'] is None:
+                # 计算风险（价格到止损的距离）
+                risk_per_share = price - stop_loss
+                
+                # 基础风险金额（账户的1%）
+                base_risk_amount = self.current_capital * 0.01
+                
+                # 调整风险金额
+                adjusted_risk = base_risk_amount * signal_strength
+                
+                # 计算可承受的仓位比例
+                if risk_per_share > 0:
+                    position_ratio = adjusted_risk / (self.current_capital * risk_per_share / price)
+                else:
+                    # 如果止损价格不合理，使用基础仓位
+                    position_ratio = self.max_position_ratio * signal_strength
+                
+                # 确保不超过最大仓位限制
+                position_ratio = min(position_ratio, self.max_position_ratio)
+                
+                return float(max(0.0, position_ratio))
+            
+            # 获取模型预测的仓位比例
+            position_ratio = self.model_manager.predict_position_size(list(features.values()))
+            
+            # 应用信号强度调整
+            adjusted_ratio = position_ratio * signal_strength * self.adaptive_params['position_size_factor']
+            
+            # 确保不超过最大仓位限制
+            adjusted_ratio = min(adjusted_ratio, self.max_position_ratio)
+            
+            logger.info(f"计算仓位: 模型建议比例={position_ratio:.4f}, 调整后比例={adjusted_ratio:.4f}, 资金比例={adjusted_ratio:.2%}")
+            
+            return float(max(0.0, adjusted_ratio))
+            
+        except Exception as e:
+            logger.error(f"计算仓位大小出错: {str(e)}")
+            
+            # 基本仓位计算作为后备
+            position_ratio = self.max_position_ratio * 0.5 * signal_strength
+            return float(max(0.0, position_ratio))
+"""
+
+# 写入文件
+try:
+    with open('evolving_backtester_part2.py', 'w', encoding='utf-8') as f:
+        f.write(header)
+        f.write(class_defs)
+        f.write(method_impl)
+    print("修复完成: evolving_backtester_part2.py")
+except Exception as e:
+    print(f"写入文件失败: {e}") 

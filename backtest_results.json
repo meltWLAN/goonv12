@@ -1,0 +1,19 @@
+{
+    "stock_code": "605008",
+    "strategy": "MACD\u91d1\u53c9\u7b56\u7565",
+    "backtest_mode": "\u6807\u51c6\u56de\u6d4b",
+    "learning_enabled": false,
+    "start_date": "2024-05-03",
+    "end_date": "2025-05-03",
+    "initial_capital": 100000.0,
+    "final_capital": 100000.0,
+    "total_return": 0.0,
+    "annual_return": 0,
+    "max_drawdown": 0,
+    "sharpe_ratio": 0,
+    "trade_count": 0,
+    "win_rate": 0,
+    "profit_ratio": 0,
+    "avg_holding_period": 0,
+    "timestamp": "2025-05-03 17:26:02"
+}

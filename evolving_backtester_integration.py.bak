@@ -1,0 +1,415 @@
+import pandas as pd
+import numpy as np
+from datetime import datetime
+import logging
+import matplotlib.pyplot as plt
+import os
+from enhanced_backtesting import EnhancedBacktester
+from evolving_backtester import ModelManager
+from evolving_backtester_part2 import EvolvingBacktester, AdvancedBacktestResult
+
+# 配置日志
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    filename='backtester_integration.log')
+logger = logging.getLogger('BacktesterIntegration')
+
+class SmartBacktesterFactory:
+    """智能回测器工厂，根据需求选择合适的回测引擎"""
+    
+    @staticmethod
+    def create_backtester(mode: str = "adaptive", initial_capital: float = 1000000.0, 
+                         learning_mode: bool = True, **kwargs):
+        """创建回测器实例
+        
+        Args:
+            mode: 回测模式 ('standard', 'advanced', 'adaptive', 'evolving')
+            initial_capital: 初始资金
+            learning_mode: 是否启用学习模式
+            **kwargs: 其他参数
+            
+        Returns:
+            回测器实例
+        """
+        if mode == "standard":
+            return EnhancedBacktester(initial_capital=initial_capital)
+        elif mode == "evolving":
+            return EvolvingBacktester(initial_capital=initial_capital, learning_mode=learning_mode)
+        else:
+            # 默认使用增强回测器
+            return EnhancedBacktester(initial_capital=initial_capital)
+
+def visualize_backtest_results(result_data, stock_code, strategy, save_path="backtest_charts"):
+    """生成回测结果的可视化图表
+    
+    Args:
+        result_data: 回测结果数据字典
+        stock_code: 股票代码
+        strategy: 策略名称
+        save_path: 图表保存路径
+    
+    Returns:
+        图表文件路径列表
+    """
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    
+    chart_files = []
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    
+    # 1. 基本收益性能图表
+    plt.figure(figsize=(12, 8))
+    
+    # 创建子图布局
+    plt.subplot(2, 2, 1)
+    plt.title('收益率对比')
+    metrics = ['total_return', 'annual_return']
+    values = [result_data.get(m, 0) for m in metrics]
+    plt.bar(['总收益率', '年化收益率'], values, color=['#2196F3', '#4CAF50'])
+    plt.ylabel('收益率 (%)')
+    plt.grid(True, alpha=0.3)
+    
+    plt.subplot(2, 2, 2)
+    plt.title('风险指标')
+    risk_metrics = ['max_drawdown', 'sharpe_ratio']
+    risk_values = [result_data.get(m, 0) for m in risk_metrics]
+    plt.bar(['最大回撤 (%)', '夏普比率'], risk_values, color=['#F44336', '#FF9800'])
+    plt.grid(True, alpha=0.3)
+    
+    plt.subplot(2, 2, 3)
+    plt.title('交易统计')
+    trade_metrics = ['win_rate', 'profit_ratio']
+    trade_values = [result_data.get('win_rate', 0), result_data.get('profit_ratio', 0)]
+    plt.bar(['胜率 (%)', '盈亏比'], trade_values, color=['#9C27B0', '#FFEB3B'])
+    plt.grid(True, alpha=0.3)
+    
+    plt.subplot(2, 2, 4)
+    plt.title('资金曲线')
+    # 这里假设资金曲线数据在result_data中，实际应用中需要确保数据存在
+    if 'capital_curve' in result_data:
+        capital_curve = result_data['capital_curve']
+        plt.plot(capital_curve, color='#2196F3')
+        plt.ylabel('资金')
+        plt.xlabel('交易日')
+        plt.grid(True, alpha=0.3)
+    else:
+        plt.text(0.5, 0.5, '资金曲线数据不可用', horizontalalignment='center', verticalalignment='center')
+    
+    plt.tight_layout()
+    performance_chart = f"{save_path}/{stock_code}_{strategy.replace(' ', '_')}_{timestamp}_performance.png"
+    plt.savefig(performance_chart)
+    plt.close()
+    chart_files.append(performance_chart)
+    
+    # 2. 如果是AI增强模式，创建AI指标图表
+    if 'ml_metrics' in result_data and result_data['ml_metrics']:
+        plt.figure(figsize=(12, 8))
+        
+        # 获取AI指标
+        ml_metrics = result_data['ml_metrics']
+        
+        # 创建入场/出场模型性能子图
+        if any(k in ml_metrics for k in ['entry_model_accuracy', 'exit_model_accuracy']):
+            plt.subplot(2, 2, 1)
+            plt.title('模型准确率')
+            model_metrics = [
+                ml_metrics.get('entry_model_accuracy', 0),
+                ml_metrics.get('exit_model_accuracy', 0)
+            ]
+            plt.bar(['入场模型', '出场模型'], model_metrics, color=['#2196F3', '#4CAF50'])
+            plt.ylim(0, 1.0)
+            plt.ylabel('准确率')
+            plt.grid(True, alpha=0.3)
+        
+        # 创建市场状态分析子图
+        if 'market_regimes' in ml_metrics and ml_metrics['market_regimes']:
+            plt.subplot(2, 2, 2)
+            plt.title('市场状态分布')
+            regimes = ml_metrics['market_regimes']
+            labels = list(regimes.keys())
+            values = list(regimes.values())
+            plt.pie(values, labels=labels, autopct='%1.1f%%', colors=['#2196F3', '#4CAF50', '#F44336', '#FFEB3B'])
+        
+        # 创建策略适应性评分子图
+        plt.subplot(2, 2, 3)
+        plt.title('策略适应性评分')
+        plt.bar(['策略适应性'], [result_data.get('strategy_adaptation_score', 0)], color='#9C27B0')
+        plt.ylim(0, 10)
+        plt.grid(True, alpha=0.3)
+        
+        # 创建其他AI指标子图
+        plt.subplot(2, 2, 4)
+        plt.title('AI指标比较')
+        other_metrics = {k: v for k, v in ml_metrics.items() 
+                        if k not in ['entry_model_accuracy', 'exit_model_accuracy', 'market_regimes'] 
+                        and isinstance(v, (int, float))}
+        if other_metrics:
+            labels = list(other_metrics.keys())
+            values = list(other_metrics.values())
+            plt.bar(labels, values, color='#FF9800')
+            plt.xticks(rotation=45, ha='right')
+            plt.grid(True, alpha=0.3)
+        else:
+            plt.text(0.5, 0.5, '没有其他AI指标', horizontalalignment='center', verticalalignment='center')
+        
+        plt.tight_layout()
+        ai_chart = f"{save_path}/{stock_code}_{strategy.replace(' ', '_')}_{timestamp}_ai_metrics.png"
+        plt.savefig(ai_chart)
+        plt.close()
+        chart_files.append(ai_chart)
+    
+    return chart_files
+
+def run_backtest(stock_code: str, stock_data: pd.DataFrame, 
+                strategy: str, start_date: str, end_date: str, 
+                initial_capital: float = 100000.0, 
+                mode: str = "adaptive",
+                learning_mode: bool = True) -> dict:
+    """执行回测并返回结果
+    
+    Args:
+        stock_code: 股票代码
+        stock_data: 股票数据
+        strategy: 策略名称
+        start_date: 开始日期
+        end_date: 结束日期
+        initial_capital: 初始资金
+        mode: 回测模式
+        learning_mode: 是否启用学习模式
+        
+    Returns:
+        回测结果字典
+    """
+    try:
+        # 确保必要的目录存在
+        os.makedirs('./ml_models', exist_ok=True)
+        os.makedirs('./backtest_charts', exist_ok=True)
+        
+        # 创建回测器
+        backtester = SmartBacktesterFactory.create_backtester(
+            mode=mode, 
+            initial_capital=initial_capital,
+            learning_mode=learning_mode
+        )
+        
+        # 检查数据
+        if stock_data is None or stock_data.empty:
+            return {
+                "error": f"获取股票 {stock_code} 数据失败",
+                "success": False
+            }
+        
+        # 检查回测起止日期
+        if pd.to_datetime(start_date) >= pd.to_datetime(end_date):
+            return {
+                "error": "回测开始日期必须早于结束日期",
+                "success": False
+            }
+        
+        # 记录回测开始
+        logger.info(f"开始回测: {stock_code}, 策略: {strategy}, 模式: {mode}, 学习模式: {learning_mode}")
+        logger.info(f"回测区间: {start_date} 至 {end_date}, 初始资金: {initial_capital:.2f}")
+        
+        # 确保股票数据列名适合回测系统
+        # 检查是否需要重命名列
+        if 'close' not in stock_data.columns and '收盘' in stock_data.columns:
+            # 记录列名转换
+            logger.info(f"检测到中文列名，将保留原始列名")
+            
+        # 添加基本技术指标
+        # 这样即使原始数据缺少某些指标，也能确保回测正常运行
+        try:
+            if '收盘' in stock_data.columns:
+                close = stock_data['收盘']
+            elif 'close' in stock_data.columns:
+                close = stock_data['close']
+            else:
+                logger.warning("无法确定收盘价列，回测可能会失败")
+                close = None
+                
+            if close is not None:
+                # 确保有基本技术指标
+                if 'MA5' not in stock_data.columns and 'ma5' not in stock_data.columns:
+                    stock_data['MA5'] = close.rolling(window=5).mean()
+                if 'MA10' not in stock_data.columns and 'ma10' not in stock_data.columns:
+                    stock_data['MA10'] = close.rolling(window=10).mean()
+                if 'MA20' not in stock_data.columns and 'ma20' not in stock_data.columns:
+                    stock_data['MA20'] = close.rolling(window=20).mean()
+        except Exception as e:
+            logger.warning(f"添加技术指标时出错: {str(e)}")
+        
+        # 执行回测
+        result = None
+        try:
+            if strategy == 'MACD金叉策略':
+                result = backtester.backtest_macd_strategy(stock_data, stock_code)
+            elif strategy == 'KDJ金叉策略':
+                result = backtester.backtest_kdj_strategy(stock_data, stock_code)
+            elif strategy == '双均线策略':
+                result = backtester.backtest_ma_strategy(stock_data, stock_code)
+            elif strategy == '布林带策略':
+                result = backtester.backtest_bollinger_strategy(stock_data, stock_code)
+            elif strategy == '量价策略':
+                result = backtester.backtest_volume_price_strategy(stock_data, stock_code)
+            else:
+                result = backtester.backtest_macd_strategy(stock_data, stock_code)  # 默认策略
+        except AttributeError as e:
+            # 特别处理方法不存在的情况
+            error_msg = str(e)
+            logger.error(f"回测方法调用失败: {error_msg}")
+            if "has no attribute 'backtest_" in error_msg:
+                method_name = error_msg.split("'")[-2] if "'" in error_msg else "未知方法"
+                return {
+                    "error": f"回测器 {type(backtester).__name__} 不支持方法 {method_name}，请确认回测模式与策略的兼容性",
+                    "success": False,
+                    "stock_code": stock_code,
+                    "strategy": strategy
+                }
+            # 其他AttributeError则向下传递给通用处理
+            raise
+        
+        # 处理回测结果
+        if isinstance(backtester, EvolvingBacktester):
+            # 如果是进化型回测器，保存学习数据以提高未来性能
+            if learning_mode and hasattr(backtester, 'save_learning_data'):
+                try:
+                    backtester.save_learning_data()
+                    logger.info("已保存学习数据")
+                except Exception as e:
+                    logger.error(f"保存学习数据失败: {str(e)}")
+                
+            # 高级回测结果处理
+            if result is None:
+                # 创建基本结果对象
+                from evolving_backtester_part2 import AdvancedBacktestResult
+                result = AdvancedBacktestResult()
+                result.total_profit = ((backtester.current_capital/initial_capital)-1)*100
+                result.trade_count = getattr(backtester, 'trade_count', 0)
+                
+            if hasattr(result, 'to_dict'):
+                result_dict = result.to_dict()
+                # 确保添加total_return以兼容后续处理
+                if 'total_return' not in result_dict:
+                    result_dict['total_return'] = result.total_profit
+            else:
+                # 基本结果
+                result_dict = {
+                    'initial_capital': initial_capital,
+                    'final_capital': backtester.current_capital,
+                    'total_return': ((backtester.current_capital/initial_capital)-1)*100,
+                    'win_rate': getattr(backtester, 'win_rate', 0) * 100,
+                    'trade_count': getattr(backtester, 'trade_count', 0),
+                    'strategy': strategy,
+                    'mode': mode,
+                    'learning_enabled': learning_mode
+                }
+                
+            # 添加市场状态分析
+            if hasattr(backtester, 'regime_memory') and backtester.regime_memory:
+                regimes = {}
+                for regime in backtester.regime_memory:
+                    if regime in regimes:
+                        regimes[regime] += 1
+                    else:
+                        regimes[regime] = 1
+                
+                # 转换为百分比
+                total = sum(regimes.values())
+                if total > 0:
+                    regimes = {k: (v/total)*100 for k, v in regimes.items()}
+                    
+                # 添加到ML指标
+                if 'ml_metrics' not in result_dict:
+                    result_dict['ml_metrics'] = {}
+                result_dict['ml_metrics']['market_regimes'] = regimes
+                
+            # 添加资金曲线数据
+            if hasattr(backtester, 'capital_history') and backtester.capital_history:
+                result_dict['capital_curve'] = backtester.capital_history
+            
+            # 添加AI性能指标
+            if hasattr(backtester, 'model_manager') and backtester.model_manager:
+                # 获取模型性能评估数据
+                entry_metrics = getattr(backtester.model_manager, 'entry_model_metrics', {})
+                exit_metrics = getattr(backtester.model_manager, 'exit_model_metrics', {})
+                position_metrics = getattr(backtester.model_manager, 'position_model_metrics', {})
+                
+                # 合并到结果
+                if 'ml_metrics' not in result_dict:
+                    result_dict['ml_metrics'] = {}
+                    
+                # 入场模型指标
+                for metric, value in entry_metrics.items():
+                    result_dict['ml_metrics'][f'entry_model_{metric}'] = value
+                    
+                # 出场模型指标
+                for metric, value in exit_metrics.items():
+                    result_dict['ml_metrics'][f'exit_model_{metric}'] = value
+                    
+                # 仓位模型指标
+                for metric, value in position_metrics.items():
+                    result_dict['ml_metrics'][f'position_model_{metric}'] = value
+        else:
+            # 普通回测器结果处理
+            days = (pd.to_datetime(end_date) - pd.to_datetime(start_date)).days
+            annual_factor = 365 / max(days, 1)
+            
+            result_dict = {
+                'initial_capital': initial_capital,
+                'final_capital': backtester.current_capital,
+                'total_return': ((backtester.current_capital/initial_capital)-1)*100,
+                'annual_return': ((backtester.current_capital/initial_capital)**annual_factor-1)*100,
+                'max_drawdown': getattr(backtester, 'max_drawdown', 0) * 100,
+                'sharpe_ratio': getattr(backtester, 'sharpe_ratio', 0),
+                'trade_count': getattr(backtester, 'trade_count', 0),
+                'win_rate': getattr(backtester, 'win_rate', 0) * 100,
+                'profit_ratio': getattr(backtester, 'profit_ratio', 0),
+                'avg_holding_period': getattr(backtester, 'avg_holding_period', 0),
+                'strategy': strategy,
+                'mode': mode
+            }
+            
+            # 尝试添加资金曲线
+            if hasattr(backtester, 'capital_history'):
+                result_dict['capital_curve'] = backtester.capital_history
+            
+        # 添加回测元数据
+        result_dict.update({
+            'stock_code': stock_code,
+            'start_date': start_date,
+            'end_date': end_date,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'success': True
+        })
+        
+        # 为进化模式生成可视化图表
+        if mode in ['evolving', 'adaptive']:
+            try:
+                chart_files = visualize_backtest_results(result_dict, stock_code, strategy)
+                if chart_files:
+                    result_dict['chart_files'] = chart_files
+            except Exception as chart_err:
+                logger.error(f"生成图表时出错: {str(chart_err)}")
+                import traceback
+                logger.error(traceback.format_exc())
+        
+        # 记录回测完成
+        logger.info(f"回测完成: {stock_code}, 最终资金: {backtester.current_capital:.2f}, " +
+                   f"总收益率: {result_dict['total_return']:.2f}%, " +
+                   f"胜率: {result_dict.get('win_rate', 0):.2f}%")
+        
+        return result_dict
+        
+    except Exception as e:
+        logger.error(f"回测过程中出错: {str(e)}")
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(error_trace)
+        
+        return {
+            "error": f"回测失败: {str(e)}",
+            "error_trace": error_trace,
+            "success": False,
+            "stock_code": stock_code,
+            "strategy": strategy
+        } 

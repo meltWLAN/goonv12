@@ -165,7 +165,7 @@ class EnhancedBacktester:
                 
         return data
         
-def backtest_kdj_strategy(self, data: pd.DataFrame, symbol: str) -> BacktestResult:
+    def backtest_kdj_strategy(self, data: pd.DataFrame, symbol: str) -> BacktestResult:
         """KDJ金叉策略回测，增强版本包含动态止损和资金管理
         
         Args:
@@ -954,76 +954,201 @@ def backtest_kdj_strategy(self, data: pd.DataFrame, symbol: str) -> BacktestResu
             BacktestResult: 回测结果
         """
         try:
-            from volume_price_strategy import VolumePriceStrategy
-            strategy = VolumePriceStrategy()
+            import logging
+            logging.info(f"开始对 {symbol} 执行量价策略回测, 数据长度: {len(data)}")
+            
+            # 标准化列名 - 确保列名符合预期
+            column_mapping = {
+                '收盘': 'close', '开盘': 'open', '最高': 'high', '最低': 'low', '成交量': 'volume',
+                'close': 'close', 'open': 'open', 'high': 'high', 'low': 'low', 'volume': 'volume',
+                'Close': 'close', 'Open': 'open', 'High': 'high', 'Low': 'low', 'Volume': 'volume'
+            }
+            
+            # 创建一个新的DataFrame，以标准化列名
+            standard_data = pd.DataFrame(index=data.index)
+            
+            # 复制数据并重命名列
+            for old_col, new_col in column_mapping.items():
+                if old_col in data.columns:
+                    standard_data[new_col] = data[old_col]
+            
+            # 确保所有必要的列都存在
+            required_columns = ['close', 'open', 'high', 'low', 'volume']
+            for col in required_columns:
+                if col not in standard_data.columns:
+                    logging.error(f"缺少必要的列: {col}, 可用列: {data.columns}")
+                    return BacktestResult()
+            
+            # 计算技术指标
+            standard_data['volume_ma20'] = standard_data['volume'].rolling(window=20).mean()
+            standard_data['price_ma5'] = standard_data['close'].rolling(window=5).mean()
+            standard_data['price_ma20'] = standard_data['close'].rolling(window=20).mean()
+            standard_data['volume_ratio'] = standard_data['volume'] / standard_data['volume_ma20']
+            
+            # 初始化状态变量
             positions = []
             capital = self.initial_capital
             current_position = None
+            self.trades = []  # 清空之前的交易记录
+            self.current_capital = capital  # 初始化当前资金
             
-            for i in range(len(data)):
-                if i < 20:  # 需要足够的数据来计算指标
-                    continue
-                    
-                # 分析当前数据
-                current_data = data.iloc[:i+1]
-                analysis = strategy.analyze(current_data)
+            # 生成交易信号
+            for i in range(20, len(standard_data)):  # 从第20天开始，确保有足够的历史数据
+                current_date = standard_data.index[i]
+                current_price = standard_data['close'].iloc[i]
+                current_volume_ratio = standard_data['volume_ratio'].iloc[i]
+                price_trend = standard_data['price_ma5'].iloc[i] > standard_data['price_ma20'].iloc[i]
                 
-                if analysis is None:
-                    continue
+                # 生成策略分数 (0-100)
+                strategy_score = 0
                 
-                current_price = data.iloc[i]['收盘']
+                # 因素1: 成交量比率 (占40分)
+                volume_score = min(current_volume_ratio * 20, 40)
+                
+                # 因素2: 价格趋势 (占30分)
+                trend_score = 30 if price_trend else 0
+                
+                # 因素3: 价格突破 (占30分)
+                breakthrough_score = 0
+                if current_price > standard_data['high'].iloc[i-1] and current_volume_ratio > 1.5:
+                    breakthrough_score = 30
+                
+                # 计算总分
+                strategy_score = volume_score + trend_score + breakthrough_score
                 
                 # 交易逻辑
                 if current_position is None:  # 没有持仓
-                    if analysis['strategy_score'] >= 80:  # 高分买入信号
+                    if strategy_score >= 70:  # 高分买入信号
                         # 计算可买入数量
                         shares = int(capital * 0.9 / current_price)  # 使用90%资金
                         if shares > 0:
+                            # 创建买入记录
+                            trade_record = TradeRecord(
+                                timestamp=current_date,
+                                symbol=symbol,
+                                action='buy',
+                                price=current_price,
+                                volume=shares,
+                                position=shares,
+                                profit=0.0,
+                                drawdown=0.0,
+                                entry_price=current_price,
+                                signal_quality=strategy_score/100,
+                                market_condition='bullish' if price_trend else 'neutral',
+                                trade_reason=f"量价策略信号分数: {strategy_score}"
+                            )
+                            self.trades.append(trade_record)
+                            
+                            # 更新资金和当前持仓
                             current_position = {
                                 'shares': shares,
                                 'buy_price': current_price,
-                                'buy_date': data.index[i],
-                                'cost': shares * current_price
+                                'buy_date': current_date,
+                                'cost': shares * current_price,
+                                'entry_record': trade_record
                             }
                             capital -= current_position['cost']
+                            self.current_capital = capital
+                            
+                            logging.info(f"买入: 日期={current_date}, 价格={current_price:.2f}, "
+                                       f"数量={shares}, 剩余资金={capital:.2f}")
                 else:  # 有持仓
-                    # 止盈止损或分数过低时卖出
+                    # 计算利润百分比
                     profit_pct = (current_price - current_position['buy_price']) / current_position['buy_price']
-                    if profit_pct >= 0.2 or profit_pct <= -0.1 or analysis['strategy_score'] < 40:
+                    
+                    # 止盈止损或分数过低时卖出
+                    if profit_pct >= 0.15 or profit_pct <= -0.08 or (strategy_score < 40 and profit_pct > 0):
                         # 卖出
-                        sell_amount = current_position['shares'] * current_price
+                        shares = current_position['shares']
+                        sell_amount = shares * current_price
+                        profit = sell_amount - current_position['cost']
+                        
+                        # 创建卖出记录
+                        trade_record = TradeRecord(
+                            timestamp=current_date,
+                            symbol=symbol,
+                            action='sell',
+                            price=current_price,
+                            volume=shares,
+                            position=0,
+                            profit=profit,
+                            drawdown=self.current_drawdown,
+                            entry_price=current_position['buy_price'],
+                            exit_price=current_price,
+                            holding_days=(current_date - current_position['buy_date']).days,
+                            signal_quality=strategy_score/100,
+                            market_condition=market_condition,
+                            trade_reason=f"{'止盈' if profit_pct >= 0.15 else '止损' if profit_pct <= -0.08 else '信号转弱'}"
+                        )
+                        self.trades.append(trade_record)
+                        
+                        # 更新资金
                         capital += sell_amount
+                        self.current_capital = capital
                         
                         # 记录交易
-                        trade = {
+                        positions.append({
                             'buy_date': current_position['buy_date'],
-                            'sell_date': data.index[i],
+                            'sell_date': current_date,
                             'buy_price': current_position['buy_price'],
                             'sell_price': current_price,
-                            'shares': current_position['shares'],
-                            'profit': sell_amount - current_position['cost'],
+                            'shares': shares,
+                            'profit': profit,
                             'profit_pct': profit_pct * 100
-                        }
-                        positions.append(trade)
+                        })
+                        
+                        logging.info(f"卖出: 日期={current_date}, 价格={current_price:.2f}, "
+                                   f"数量={shares}, 利润={profit:.2f}, 收益率={profit_pct*100:.2f}%, "
+                                   f"当前资金={capital:.2f}")
+                        
                         current_position = None
             
             # 如果还有持仓，按最后价格卖出
             if current_position is not None:
-                last_price = data.iloc[-1]['收盘']
-                sell_amount = current_position['shares'] * last_price
-                capital += sell_amount
-                
+                last_date = standard_data.index[-1]
+                last_price = standard_data['close'].iloc[-1]
+                shares = current_position['shares']
+                sell_amount = shares * last_price
+                profit = sell_amount - current_position['cost']
                 profit_pct = (last_price - current_position['buy_price']) / current_position['buy_price']
-                trade = {
+                
+                # 创建卖出记录
+                trade_record = TradeRecord(
+                    timestamp=last_date,
+                    symbol=symbol,
+                    action='sell',
+                    price=last_price,
+                    volume=shares,
+                    position=0,
+                    profit=profit,
+                    drawdown=self.current_drawdown,
+                    entry_price=current_position['buy_price'],
+                    exit_price=last_price,
+                    holding_days=(last_date - current_position['buy_date']).days,
+                    signal_quality=0.5,
+                    market_condition='neutral',
+                    trade_reason="回测结束平仓"
+                )
+                self.trades.append(trade_record)
+                
+                # 更新资金
+                capital += sell_amount
+                self.current_capital = capital
+                
+                # 记录交易
+                positions.append({
                     'buy_date': current_position['buy_date'],
-                    'sell_date': data.index[-1],
+                    'sell_date': last_date,
                     'buy_price': current_position['buy_price'],
                     'sell_price': last_price,
-                    'shares': current_position['shares'],
-                    'profit': sell_amount - current_position['cost'],
+                    'shares': shares,
+                    'profit': profit,
                     'profit_pct': profit_pct * 100
-                }
-                positions.append(trade)
+                })
+                
+                logging.info(f"回测结束平仓: 日期={last_date}, 价格={last_price:.2f}, "
+                           f"数量={shares}, 利润={profit:.2f}, 收益率={profit_pct*100:.2f}%, "
+                           f"最终资金={capital:.2f}")
             
             # 计算回测结果
             result = BacktestResult()
@@ -1038,18 +1163,56 @@ def backtest_kdj_strategy(self, data: pd.DataFrame, symbol: str) -> BacktestResu
             result.trade_count = total_trades
             result.win_rate = win_trades / total_trades if total_trades > 0 else 0
             
+            # 计算平均持仓周期
+            if positions:
+                avg_holding_days = sum([(p['sell_date'] - p['buy_date']).days for p in positions]) / len(positions)
+                result.avg_holding_period = avg_holding_days
+            
+            # 计算最大回撤
+            max_drawdown = 0
+            peak_capital = self.initial_capital
+            
+            # 模拟资金曲线来计算最大回撤
+            capital_curve = [self.initial_capital]
+            for trade in positions:
+                current_capital = capital_curve[-1] + trade['profit']
+                capital_curve.append(current_capital)
+                
+                if current_capital > peak_capital:
+                    peak_capital = current_capital
+                else:
+                    drawdown = (peak_capital - current_capital) / peak_capital
+                    max_drawdown = max(max_drawdown, drawdown)
+            
+            result.max_drawdown = max_drawdown
+            
+            # 如果交易次数足够，计算年化收益率
+            if total_trades > 0 and len(standard_data) > 20:
+                trading_days = (standard_data.index[-1] - standard_data.index[20]).days
+                if trading_days > 0:
+                    annual_return = ((1 + result.profit_pct/100) ** (365/trading_days)) - 1
+                    result.annual_return = annual_return
+            
+            # 计算盈亏比
+            if win_trades > 0 and total_trades > win_trades:
+                avg_win = sum([t['profit'] for t in positions if t['profit'] > 0]) / win_trades
+                avg_loss = sum([-t['profit'] for t in positions if t['profit'] <= 0]) / (total_trades - win_trades)
+                result.profit_ratio = avg_win / avg_loss if avg_loss > 0 else 0
+            
             # 更新类属性，以便app可以访问
+            self.trades = self.trades  # 确保交易记录已更新
             self.current_capital = capital
             self.win_rate = result.win_rate
             self.trade_count = result.trade_count
-            
-            # 让类属性和BacktestResult保持一致
             self.total_profit = result.total_profit
-            self.max_drawdown = 0  # 暂不计算
+            self.max_drawdown = result.max_drawdown
             self.sharpe_ratio = 0  # 暂不计算
-            self.profit_ratio = 0  # 暂不计算
-            self.annual_return = 0  # 暂不计算
-            self.avg_holding_period = 0  # 暂不计算
+            self.profit_ratio = result.profit_ratio
+            self.annual_return = result.annual_return if hasattr(result, 'annual_return') else 0
+            self.avg_holding_period = result.avg_holding_period
+            
+            logging.info(f"量价策略回测完成: 股票={symbol}, 总利润={result.total_profit:.2f}, "
+                       f"交易次数={result.trade_count}, 胜率={result.win_rate*100:.2f}%")
             
             return result
             
@@ -1059,6 +1222,1024 @@ def backtest_kdj_strategy(self, data: pd.DataFrame, symbol: str) -> BacktestResu
             import traceback
             logging.error(traceback.format_exc())
             
-            # 返回空结果
+            # 返回空结果，但确保设置基本属性
             result = BacktestResult()
+            self.current_capital = self.initial_capital
+            self.win_rate = 0
+            self.trade_count = 0
+            self.total_profit = 0
+            self.max_drawdown = 0
+            self.sharpe_ratio = 0
+            self.profit_ratio = 0
+            self.annual_return = 0
+            self.avg_holding_period = 0
+            
             return result
+
+    def backtest_macd_strategy(self, data: pd.DataFrame, symbol: str) -> BacktestResult:
+        """MACD金叉策略回测
+        
+        Args:
+            data: 股票数据，包含OHLCV数据
+            symbol: 股票代码
+            
+        Returns:
+            回测结果
+        """
+        try:
+            import logging
+            logging.info(f"开始对 {symbol} 执行MACD策略回测, 数据长度: {len(data)}")
+            
+            # 标准化列名
+            column_mapping = {
+                '收盘': 'close', '开盘': 'open', '最高': 'high', '最低': 'low', '成交量': 'volume',
+                'close': 'close', 'open': 'open', 'high': 'high', 'low': 'low', 'volume': 'volume',
+                'Close': 'close', 'Open': 'open', 'High': 'high', 'Low': 'low', 'Volume': 'volume'
+            }
+            
+            # 创建标准化数据
+            standard_data = pd.DataFrame(index=data.index)
+            for old_col, new_col in column_mapping.items():
+                if old_col in data.columns:
+                    standard_data[new_col] = data[old_col]
+            
+            # 检查必要的列
+            if 'close' not in standard_data.columns:
+                logging.error(f"缺少必要的列: close, 可用列: {data.columns}")
+                return BacktestResult()
+            
+            # 计算MACD指标
+            close = standard_data['close']
+            exp1 = close.ewm(span=12, adjust=False).mean()
+            exp2 = close.ewm(span=26, adjust=False).mean()
+            macd = exp1 - exp2
+            signal = macd.ewm(span=9, adjust=False).mean()
+            histogram = macd - signal
+            
+            # 添加到数据中
+            standard_data['macd'] = macd
+            standard_data['macd_signal'] = signal
+            standard_data['macd_hist'] = histogram
+            standard_data['atr'] = self._calculate_atr(data)
+            
+            # 生成交易信号
+            signals = pd.DataFrame(index=standard_data.index)
+            signals['action'] = 'hold'
+            signals['price'] = standard_data['close']
+            signals['volume'] = 0.0
+            signals['signal_quality'] = 0.0
+            signals['market_condition'] = 'normal'
+            signals['stop_loss'] = 0.0
+            
+            # 初始化交易状态
+            self.trades = []
+            self.current_capital = self.initial_capital
+            positions = {}
+            
+            # MACD金叉和死叉
+            for i in range(26, len(standard_data)):
+                # 金叉: MACD线从下方穿过信号线
+                golden_cross = (standard_data['macd'].iloc[i-1] < standard_data['macd_signal'].iloc[i-1]) and \
+                               (standard_data['macd'].iloc[i] > standard_data['macd_signal'].iloc[i])
+                
+                # 死叉: MACD线从上方穿过信号线
+                death_cross = (standard_data['macd'].iloc[i-1] > standard_data['macd_signal'].iloc[i-1]) and \
+                              (standard_data['macd'].iloc[i] < standard_data['macd_signal'].iloc[i])
+                
+                # 当前价格
+                current_date = standard_data.index[i]
+                current_price = standard_data['close'].iloc[i]
+                
+                # 信号质量 (0-1)
+                signal_strength = abs(standard_data['macd_hist'].iloc[i]) / 2  # 标准化到0-1范围
+                signal_quality = min(signal_strength, 1.0)
+                
+                # 市场状况
+                if standard_data['macd'].iloc[i] > 0 and standard_data['macd_hist'].iloc[i] > 0:
+                    market_condition = "bullish"
+                elif standard_data['macd'].iloc[i] < 0 and standard_data['macd_hist'].iloc[i] < 0:
+                    market_condition = "bearish"
+                else:
+                    market_condition = "neutral"
+                
+                # 处理买入信号
+                if golden_cross and symbol not in positions:
+                    # 计算止损价格
+                    stop_loss = current_price - 2 * standard_data['atr'].iloc[i]
+                    
+                    # 计算买入资金
+                    position_value = self.current_capital * self.max_position_ratio
+                    shares = int(position_value / current_price)
+                    
+                    if shares > 0:
+                        # 执行买入
+                        trade_record = TradeRecord(
+                            timestamp=current_date,
+                            symbol=symbol,
+                            action='buy',
+                            price=current_price,
+                            volume=shares,
+                            position=shares,
+                            profit=0.0,
+                            drawdown=0.0,
+                            entry_price=current_price,
+                            signal_quality=signal_quality,
+                            market_condition=market_condition,
+                            trade_reason=f"MACD金叉信号"
+                        )
+                        self.trades.append(trade_record)
+                        
+                        # 更新资金和持仓
+                        cost = shares * current_price
+                        self.current_capital -= cost
+                        positions[symbol] = {
+                            'shares': shares,
+                            'entry_price': current_price,
+                            'entry_date': current_date,
+                            'cost': cost,
+                            'stop_loss': stop_loss
+                        }
+                        
+                        logging.info(f"买入: {symbol}, 日期={current_date}, 价格={current_price:.2f}, "
+                                   f"数量={shares}, 止损={stop_loss:.2f}, 剩余资金={self.current_capital:.2f}")
+                
+                # 处理卖出信号
+                elif (death_cross or current_price <= positions.get(symbol, {}).get('stop_loss', 0)) and symbol in positions:
+                    position = positions[symbol]
+                    shares = position['shares']
+                    entry_price = position['entry_price']
+                    
+                    # 计算利润
+                    profit = (current_price - entry_price) * shares
+                    profit_pct = (current_price - entry_price) / entry_price
+                    
+                    # 执行卖出
+                    trade_record = TradeRecord(
+                        timestamp=current_date,
+                        symbol=symbol,
+                        action='sell',
+                        price=current_price,
+                        volume=shares,
+                        position=0,
+                        profit=profit,
+                        drawdown=0.0,
+                        entry_price=entry_price,
+                        exit_price=current_price,
+                        holding_days=(current_date - position['entry_date']).days,
+                        signal_quality=signal_quality,
+                        market_condition=market_condition,
+                        trade_reason=f"{'MACD死叉信号' if death_cross else '止损触发'}"
+                    )
+                    self.trades.append(trade_record)
+                    
+                    # 更新资金和持仓
+                    self.current_capital += shares * current_price
+                    del positions[symbol]
+                    
+                    logging.info(f"卖出: {symbol}, 日期={current_date}, 价格={current_price:.2f}, "
+                               f"数量={shares}, 利润={profit:.2f}, 收益率={profit_pct*100:.2f}%, "
+                               f"当前资金={self.current_capital:.2f}")
+            
+            # 如果还有持仓，平仓
+            if symbol in positions:
+                position = positions[symbol]
+                shares = position['shares']
+                entry_price = position['entry_price']
+                last_date = standard_data.index[-1]
+                last_price = standard_data['close'].iloc[-1]
+                
+                # 计算利润
+                profit = (last_price - entry_price) * shares
+                profit_pct = (last_price - entry_price) / entry_price
+                
+                # 执行卖出
+                trade_record = TradeRecord(
+                    timestamp=last_date,
+                    symbol=symbol,
+                    action='sell',
+                    price=last_price,
+                    volume=shares,
+                    position=0,
+                    profit=profit,
+                    drawdown=0.0,
+                    entry_price=entry_price,
+                    exit_price=last_price,
+                    holding_days=(last_date - position['entry_date']).days,
+                    signal_quality=0.5,
+                    market_condition='neutral',
+                    trade_reason="回测结束平仓"
+                )
+                self.trades.append(trade_record)
+                
+                # 更新资金
+                self.current_capital += shares * last_price
+                
+                logging.info(f"回测结束平仓: {symbol}, 日期={last_date}, 价格={last_price:.2f}, "
+                           f"数量={shares}, 利润={profit:.2f}, 收益率={profit_pct*100:.2f}%, "
+                           f"最终资金={self.current_capital:.2f}")
+            
+            # 计算回测结果指标
+            result = self.calculate_metrics()
+            
+            # 更新策略特定属性
+            self.trade_count = len([t for t in self.trades if t.action == 'sell'])
+            self.total_profit = self.current_capital - self.initial_capital
+            
+            # 计算胜率
+            win_trades = len([t for t in self.trades if t.action == 'sell' and t.profit > 0])
+            total_trades = len([t for t in self.trades if t.action == 'sell'])
+            self.win_rate = win_trades / total_trades if total_trades > 0 else 0
+            
+            # 计算最大回撤
+            max_drawdown = 0
+            peak_capital = self.initial_capital
+            current_capital = self.initial_capital
+            
+            # 模拟资金曲线
+            for t in self.trades:
+                if t.action == 'buy':
+                    current_capital -= t.price * t.volume
+                else:  # sell
+                    current_capital += t.price * t.volume
+                
+                if current_capital > peak_capital:
+                    peak_capital = current_capital
+                else:
+                    drawdown = (peak_capital - current_capital) / peak_capital
+                    max_drawdown = max(max_drawdown, drawdown)
+            
+            self.max_drawdown = max_drawdown
+            
+            # 设置其他回测指标
+            self.sharpe_ratio = 0  # 需要更多数据计算
+            
+            # 计算平均持仓周期
+            holding_days = [t.holding_days for t in self.trades if t.action == 'sell']
+            self.avg_holding_period = sum(holding_days) / len(holding_days) if holding_days else 0
+            
+            # 计算盈亏比
+            win_profits = [t.profit for t in self.trades if t.action == 'sell' and t.profit > 0]
+            loss_profits = [abs(t.profit) for t in self.trades if t.action == 'sell' and t.profit < 0]
+            
+            avg_win = sum(win_profits) / len(win_profits) if win_profits else 0
+            avg_loss = sum(loss_profits) / len(loss_profits) if loss_profits else 1  # 避免除以零
+            
+            self.profit_ratio = avg_win / avg_loss if avg_loss > 0 else 0
+            
+            # 计算年化收益率
+            if len(standard_data) > 26:
+                days = (standard_data.index[-1] - standard_data.index[26]).days
+                if days > 0:
+                    self.annual_return = ((self.current_capital / self.initial_capital) ** (365 / days)) - 1
+                else:
+                    self.annual_return = 0
+            else:
+                self.annual_return = 0
+            
+            logging.info(f"MACD策略回测完成: {symbol}, 总利润={self.total_profit:.2f}, "
+                       f"交易次数={self.trade_count}, 胜率={self.win_rate*100:.2f}%, "
+                       f"年化收益率={self.annual_return*100:.2f}%")
+            
+            return result
+            
+        except Exception as e:
+            import logging
+            import traceback
+            logging.error(f"MACD策略回测出错: {str(e)}")
+            logging.error(traceback.format_exc())
+            
+            # 设置默认值，避免属性错误
+            self.current_capital = self.initial_capital
+            self.win_rate = 0
+            self.trade_count = 0
+            self.total_profit = 0
+            self.max_drawdown = 0
+            self.sharpe_ratio = 0
+            self.profit_ratio = 0
+            self.annual_return = 0
+            self.avg_holding_period = 0
+            
+            return BacktestResult()
+
+    def _get_volatility_percentile(self) -> float:
+        """获取当前市场波动率分位数
+        
+        如果未计算波动率分位数，返回默认值0.5
+        
+        Returns:
+            波动率分位数 (0-1)
+        """
+        return self.market_volatility_percentile
+
+    def backtest_ma_strategy(self, data: pd.DataFrame, symbol: str) -> BacktestResult:
+        """双均线策略回测
+        
+        Args:
+            data: 股票数据，包含OHLCV数据
+            symbol: 股票代码
+            
+        Returns:
+            回测结果
+        """
+        try:
+            import logging
+            logging.info(f"开始对 {symbol} 执行双均线策略回测, 数据长度: {len(data)}")
+            
+            # 标准化列名
+            column_mapping = {
+                '收盘': 'close', '开盘': 'open', '最高': 'high', '最低': 'low', '成交量': 'volume',
+                'close': 'close', 'open': 'open', 'high': 'high', 'low': 'low', 'volume': 'volume',
+                'Close': 'close', 'Open': 'open', 'High': 'high', 'Low': 'low', 'Volume': 'volume'
+            }
+            
+            # 创建标准化数据
+            standard_data = pd.DataFrame(index=data.index)
+            for old_col, new_col in column_mapping.items():
+                if old_col in data.columns:
+                    standard_data[new_col] = data[old_col]
+            
+            # 检查必要的列
+            if 'close' not in standard_data.columns:
+                logging.error(f"缺少必要的列: close, 可用列: {data.columns}")
+                return BacktestResult()
+            
+            # 计算移动平均线
+            short_ma = 5  # 短期均线
+            long_ma = 20  # 长期均线
+            
+            standard_data['ma_short'] = standard_data['close'].rolling(window=short_ma).mean()
+            standard_data['ma_long'] = standard_data['close'].rolling(window=long_ma).mean()
+            standard_data['atr'] = self._calculate_atr(data)
+            
+            # 初始化交易状态
+            self.trades = []
+            self.current_capital = self.initial_capital
+            positions = {}
+            
+            # 生成交易信号
+            for i in range(long_ma, len(standard_data)):
+                # 金叉: 短期均线上穿长期均线
+                golden_cross = (standard_data['ma_short'].iloc[i-1] <= standard_data['ma_long'].iloc[i-1]) and \
+                             (standard_data['ma_short'].iloc[i] > standard_data['ma_long'].iloc[i])
+                
+                # 死叉: 短期均线下穿长期均线
+                death_cross = (standard_data['ma_short'].iloc[i-1] >= standard_data['ma_long'].iloc[i-1]) and \
+                            (standard_data['ma_short'].iloc[i] < standard_data['ma_long'].iloc[i])
+                
+                # 当前价格和日期
+                current_date = standard_data.index[i]
+                current_price = standard_data['close'].iloc[i]
+                
+                # 计算信号质量 (0-1)
+                ma_diff = abs(standard_data['ma_short'].iloc[i] - standard_data['ma_long'].iloc[i]) / standard_data['close'].iloc[i]
+                signal_quality = min(ma_diff * 20, 1.0)  # 标准化到0-1范围
+                
+                # 市场状况
+                if standard_data['ma_short'].iloc[i] > standard_data['ma_long'].iloc[i]:
+                    market_condition = "bullish"
+                else:
+                    market_condition = "bearish"
+                
+                # 处理买入信号
+                if golden_cross and symbol not in positions:
+                    # 计算止损价格
+                    stop_loss = current_price - 2 * standard_data['atr'].iloc[i]
+                    
+                    # 计算买入资金
+                    position_value = self.current_capital * self.max_position_ratio
+                    shares = int(position_value / current_price)
+                    
+                    if shares > 0:
+                        # 执行买入
+                        trade_record = TradeRecord(
+                            timestamp=current_date,
+                            symbol=symbol,
+                            action='buy',
+                            price=current_price,
+                            volume=shares,
+                            position=shares,
+                            profit=0.0,
+                            drawdown=0.0,
+                            entry_price=current_price,
+                            signal_quality=signal_quality,
+                            market_condition=market_condition,
+                            trade_reason=f"MA{short_ma}上穿MA{long_ma}"
+                        )
+                        self.trades.append(trade_record)
+                        
+                        # 更新资金和持仓
+                        cost = shares * current_price
+                        self.current_capital -= cost
+                        positions[symbol] = {
+                            'shares': shares,
+                            'entry_price': current_price,
+                            'entry_date': current_date,
+                            'cost': cost,
+                            'stop_loss': stop_loss
+                        }
+                        
+                        logging.info(f"买入: {symbol}, 日期={current_date}, 价格={current_price:.2f}, "
+                                   f"数量={shares}, 止损={stop_loss:.2f}, 剩余资金={self.current_capital:.2f}")
+                
+                # 处理卖出信号
+                elif (death_cross or current_price <= positions.get(symbol, {}).get('stop_loss', 0)) and symbol in positions:
+                    position = positions[symbol]
+                    shares = position['shares']
+                    entry_price = position['entry_price']
+                    
+                    # 计算利润
+                    profit = (current_price - entry_price) * shares
+                    profit_pct = (current_price - entry_price) / entry_price
+                    
+                    # 执行卖出
+                    trade_record = TradeRecord(
+                        timestamp=current_date,
+                        symbol=symbol,
+                        action='sell',
+                        price=current_price,
+                        volume=shares,
+                        position=0,
+                        profit=profit,
+                        drawdown=0.0,
+                        entry_price=entry_price,
+                        exit_price=current_price,
+                        holding_days=(current_date - position['entry_date']).days,
+                        signal_quality=signal_quality,
+                        market_condition=market_condition,
+                        trade_reason=f"{'MA死叉信号' if death_cross else '止损触发'}"
+                    )
+                    self.trades.append(trade_record)
+                    
+                    # 更新资金和持仓
+                    self.current_capital += shares * current_price
+                    del positions[symbol]
+                    
+                    logging.info(f"卖出: {symbol}, 日期={current_date}, 价格={current_price:.2f}, "
+                              f"数量={shares}, 利润={profit:.2f}, 收益率={profit_pct*100:.2f}%, "
+                              f"当前资金={self.current_capital:.2f}")
+            
+            # 如果还有持仓，平仓
+            if symbol in positions:
+                position = positions[symbol]
+                shares = position['shares']
+                entry_price = position['entry_price']
+                last_date = standard_data.index[-1]
+                last_price = standard_data['close'].iloc[-1]
+                
+                # 计算利润
+                profit = (last_price - entry_price) * shares
+                profit_pct = (last_price - entry_price) / entry_price
+                
+                # 执行卖出
+                trade_record = TradeRecord(
+                    timestamp=last_date,
+                    symbol=symbol,
+                    action='sell',
+                    price=last_price,
+                    volume=shares,
+                    position=0,
+                    profit=profit,
+                    drawdown=0.0,
+                    entry_price=entry_price,
+                    exit_price=last_price,
+                    holding_days=(last_date - position['entry_date']).days,
+                    signal_quality=0.5,
+                    market_condition='neutral',
+                    trade_reason="回测结束平仓"
+                )
+                self.trades.append(trade_record)
+                
+                # 更新资金
+                self.current_capital += shares * last_price
+                
+                logging.info(f"回测结束平仓: {symbol}, 日期={last_date}, 价格={last_price:.2f}, "
+                          f"数量={shares}, 利润={profit:.2f}, 收益率={profit_pct*100:.2f}%, "
+                          f"最终资金={self.current_capital:.2f}")
+            
+            # 计算回测结果指标
+            result = self.calculate_metrics()
+            
+            # 更新策略特定属性
+            self.trade_count = len([t for t in self.trades if t.action == 'sell'])
+            self.total_profit = self.current_capital - self.initial_capital
+            
+            # 计算胜率
+            win_trades = len([t for t in self.trades if t.action == 'sell' and t.profit > 0])
+            total_trades = len([t for t in self.trades if t.action == 'sell'])
+            self.win_rate = win_trades / total_trades if total_trades > 0 else 0
+            
+            # 计算最大回撤
+            max_drawdown = 0
+            peak_capital = self.initial_capital
+            current_capital = self.initial_capital
+            
+            # 模拟资金曲线
+            for t in sorted(self.trades, key=lambda x: x.timestamp):
+                if t.action == 'buy':
+                    current_capital -= t.price * t.volume
+                else:  # sell
+                    current_capital += t.price * t.volume
+                
+                if current_capital > peak_capital:
+                    peak_capital = current_capital
+                else:
+                    drawdown = (peak_capital - current_capital) / peak_capital
+                    max_drawdown = max(max_drawdown, drawdown)
+            
+            self.max_drawdown = max_drawdown
+            
+            # 设置其他回测指标
+            self.sharpe_ratio = 0  # 需要更多数据计算
+            
+            # 计算平均持仓周期
+            holding_days = [t.holding_days for t in self.trades if t.action == 'sell']
+            self.avg_holding_period = sum(holding_days) / len(holding_days) if holding_days else 0
+            
+            # 计算盈亏比
+            win_profits = [t.profit for t in self.trades if t.action == 'sell' and t.profit > 0]
+            loss_profits = [abs(t.profit) for t in self.trades if t.action == 'sell' and t.profit < 0]
+            
+            avg_win = sum(win_profits) / len(win_profits) if win_profits else 0
+            avg_loss = sum(loss_profits) / len(loss_profits) if loss_profits else 1  # 避免除以零
+            
+            self.profit_ratio = avg_win / avg_loss if avg_loss > 0 else 0
+            
+            # 计算年化收益率
+            if len(standard_data) > long_ma:
+                days = (standard_data.index[-1] - standard_data.index[long_ma]).days
+                if days > 0:
+                    self.annual_return = ((self.current_capital / self.initial_capital) ** (365 / days)) - 1
+                else:
+                    self.annual_return = 0
+            else:
+                self.annual_return = 0
+            
+            logging.info(f"双均线策略回测完成: {symbol}, 总利润={self.total_profit:.2f}, "
+                       f"交易次数={self.trade_count}, 胜率={self.win_rate*100:.2f}%, "
+                       f"年化收益率={self.annual_return*100:.2f}%")
+            
+            return result
+            
+        except Exception as e:
+            import logging
+            import traceback
+            logging.error(f"双均线策略回测出错: {str(e)}")
+            logging.error(traceback.format_exc())
+            
+            # 设置默认值，避免属性错误
+            self.current_capital = self.initial_capital
+            self.win_rate = 0
+            self.trade_count = 0
+            self.total_profit = 0
+            self.max_drawdown = 0
+            self.sharpe_ratio = 0
+            self.profit_ratio = 0
+            self.annual_return = 0
+            self.avg_holding_period = 0
+            
+            return BacktestResult()
+
+    def backtest_bollinger_strategy(self, data: pd.DataFrame, symbol: str) -> BacktestResult:
+        """布林带策略回测
+        
+        Args:
+            data: 股票数据，包含OHLCV数据
+            symbol: 股票代码
+            
+        Returns:
+            回测结果
+        """
+        try:
+            import logging
+            logging.info(f"开始对 {symbol} 执行布林带策略回测, 数据长度: {len(data)}")
+            
+            # 标准化列名
+            column_mapping = {
+                '收盘': 'close', '开盘': 'open', '最高': 'high', '最低': 'low', '成交量': 'volume',
+                'close': 'close', 'open': 'open', 'high': 'high', 'low': 'low', 'volume': 'volume',
+                'Close': 'close', 'Open': 'open', 'High': 'high', 'Low': 'low', 'Volume': 'volume'
+            }
+            
+            # 创建标准化数据
+            standard_data = pd.DataFrame(index=data.index)
+            for old_col, new_col in column_mapping.items():
+                if old_col in data.columns:
+                    standard_data[new_col] = data[old_col]
+            
+            # 检查必要的列
+            if 'close' not in standard_data.columns:
+                logging.error(f"缺少必要的列: close, 可用列: {data.columns}")
+                return BacktestResult()
+            
+            # 计算布林带指标
+            period = 20
+            std_dev = 2
+            
+            standard_data['middle_band'] = standard_data['close'].rolling(window=period).mean()
+            std = standard_data['close'].rolling(window=period).std()
+            standard_data['upper_band'] = standard_data['middle_band'] + (std * std_dev)
+            standard_data['lower_band'] = standard_data['middle_band'] - (std * std_dev)
+            standard_data['bandwidth'] = (standard_data['upper_band'] - standard_data['lower_band']) / standard_data['middle_band']
+            standard_data['atr'] = self._calculate_atr(data)
+            
+            # 初始化交易状态
+            self.trades = []
+            self.current_capital = self.initial_capital
+            positions = {}
+            
+            # 生成交易信号
+            for i in range(period, len(standard_data)):
+                # 当前价格和日期
+                current_date = standard_data.index[i]
+                current_price = standard_data['close'].iloc[i]
+                
+                # 计算信号质量 (0-1)
+                # 带宽作为信号质量的指标，带宽越大，波动性越大，信号质量越低
+                bandwidth = standard_data['bandwidth'].iloc[i]
+                signal_quality = max(0, min(1, 1 - (bandwidth * 5)))  # 标准化到0-1范围
+                
+                # 下轨买入信号: 价格触及下轨
+                lower_touch = current_price <= standard_data['lower_band'].iloc[i]
+                
+                # 上轨卖出信号: 价格触及上轨
+                upper_touch = current_price >= standard_data['upper_band'].iloc[i]
+                
+                # 回归均值信号: 价格回归到中轨附近
+                mean_reversion = abs(current_price - standard_data['middle_band'].iloc[i]) / standard_data['middle_band'].iloc[i] < 0.01
+                
+                # 市场状况
+                if current_price > standard_data['middle_band'].iloc[i]:
+                    market_condition = "bullish"
+                elif current_price < standard_data['middle_band'].iloc[i]:
+                    market_condition = "bearish"
+                else:
+                    market_condition = "neutral"
+                
+                # 处理买入信号
+                if lower_touch and symbol not in positions:
+                    # 计算止损价格
+                    stop_loss = current_price - 1.5 * standard_data['atr'].iloc[i]
+                    
+                    # 计算买入资金
+                    position_value = self.current_capital * self.max_position_ratio
+                    shares = int(position_value / current_price)
+                    
+                    if shares > 0:
+                        # 执行买入
+                        trade_record = TradeRecord(
+                            timestamp=current_date,
+                            symbol=symbol,
+                            action='buy',
+                            price=current_price,
+                            volume=shares,
+                            position=shares,
+                            profit=0.0,
+                            drawdown=0.0,
+                            entry_price=current_price,
+                            signal_quality=signal_quality,
+                            market_condition=market_condition,
+                            trade_reason="价格触及布林带下轨"
+                        )
+                        self.trades.append(trade_record)
+                        
+                        # 更新资金和持仓
+                        cost = shares * current_price
+                        self.current_capital -= cost
+                        positions[symbol] = {
+                            'shares': shares,
+                            'entry_price': current_price,
+                            'entry_date': current_date,
+                            'cost': cost,
+                            'stop_loss': stop_loss
+                        }
+                        
+                        logging.info(f"买入: {symbol}, 日期={current_date}, 价格={current_price:.2f}, "
+                                   f"数量={shares}, 止损={stop_loss:.2f}, 剩余资金={self.current_capital:.2f}")
+                
+                # 处理卖出信号
+                elif ((upper_touch or (mean_reversion and symbol in positions and current_price > positions[symbol]['entry_price'])) or 
+                      current_price <= positions.get(symbol, {}).get('stop_loss', 0)) and symbol in positions:
+                    position = positions[symbol]
+                    shares = position['shares']
+                    entry_price = position['entry_price']
+                    
+                    # 计算利润
+                    profit = (current_price - entry_price) * shares
+                    profit_pct = (current_price - entry_price) / entry_price
+                    
+                    # 确定卖出原因
+                    if upper_touch:
+                        reason = "价格触及布林带上轨"
+                    elif mean_reversion:
+                        reason = "价格回归均值，盈利了结"
+                    else:
+                        reason = "止损触发"
+                    
+                    # 执行卖出
+                    trade_record = TradeRecord(
+                        timestamp=current_date,
+                        symbol=symbol,
+                        action='sell',
+                        price=current_price,
+                        volume=shares,
+                        position=0,
+                        profit=profit,
+                        drawdown=0.0,
+                        entry_price=entry_price,
+                        exit_price=current_price,
+                        holding_days=(current_date - position['entry_date']).days,
+                        signal_quality=signal_quality,
+                        market_condition=market_condition,
+                        trade_reason=reason
+                    )
+                    self.trades.append(trade_record)
+                    
+                    # 更新资金和持仓
+                    self.current_capital += shares * current_price
+                    del positions[symbol]
+                    
+                    logging.info(f"卖出: {symbol}, 日期={current_date}, 价格={current_price:.2f}, "
+                              f"数量={shares}, 利润={profit:.2f}, 收益率={profit_pct*100:.2f}%, "
+                              f"当前资金={self.current_capital:.2f}, 原因={reason}")
+            
+            # 如果还有持仓，平仓
+            if symbol in positions:
+                position = positions[symbol]
+                shares = position['shares']
+                entry_price = position['entry_price']
+                last_date = standard_data.index[-1]
+                last_price = standard_data['close'].iloc[-1]
+                
+                # 计算利润
+                profit = (last_price - entry_price) * shares
+                profit_pct = (last_price - entry_price) / entry_price
+                
+                # 执行卖出
+                trade_record = TradeRecord(
+                    timestamp=last_date,
+                    symbol=symbol,
+                    action='sell',
+                    price=last_price,
+                    volume=shares,
+                    position=0,
+                    profit=profit,
+                    drawdown=0.0,
+                    entry_price=entry_price,
+                    exit_price=last_price,
+                    holding_days=(last_date - position['entry_date']).days,
+                    signal_quality=0.5,
+                    market_condition='neutral',
+                    trade_reason="回测结束平仓"
+                )
+                self.trades.append(trade_record)
+                
+                # 更新资金
+                self.current_capital += shares * last_price
+                
+                logging.info(f"回测结束平仓: {symbol}, 日期={last_date}, 价格={last_price:.2f}, "
+                          f"数量={shares}, 利润={profit:.2f}, 收益率={profit_pct*100:.2f}%, "
+                          f"最终资金={self.current_capital:.2f}")
+            
+            # 计算回测结果指标
+            result = self.calculate_metrics()
+            
+            # 更新策略特定属性
+            self.trade_count = len([t for t in self.trades if t.action == 'sell'])
+            self.total_profit = self.current_capital - self.initial_capital
+            
+            # 计算胜率
+            win_trades = len([t for t in self.trades if t.action == 'sell' and t.profit > 0])
+            total_trades = len([t for t in self.trades if t.action == 'sell'])
+            self.win_rate = win_trades / total_trades if total_trades > 0 else 0
+            
+            # 计算最大回撤
+            max_drawdown = 0
+            peak_capital = self.initial_capital
+            current_capital = self.initial_capital
+            
+            # 模拟资金曲线
+            for t in sorted(self.trades, key=lambda x: x.timestamp):
+                if t.action == 'buy':
+                    current_capital -= t.price * t.volume
+                else:  # sell
+                    current_capital += t.price * t.volume
+                
+                if current_capital > peak_capital:
+                    peak_capital = current_capital
+                else:
+                    drawdown = (peak_capital - current_capital) / peak_capital
+                    max_drawdown = max(max_drawdown, drawdown)
+            
+            self.max_drawdown = max_drawdown
+            
+            # 设置其他回测指标
+            self.sharpe_ratio = 0  # 需要更多数据计算
+            
+            # 计算平均持仓周期
+            holding_days = [t.holding_days for t in self.trades if t.action == 'sell']
+            self.avg_holding_period = sum(holding_days) / len(holding_days) if holding_days else 0
+            
+            # 计算盈亏比
+            win_profits = [t.profit for t in self.trades if t.action == 'sell' and t.profit > 0]
+            loss_profits = [abs(t.profit) for t in self.trades if t.action == 'sell' and t.profit < 0]
+            
+            avg_win = sum(win_profits) / len(win_profits) if win_profits else 0
+            avg_loss = sum(loss_profits) / len(loss_profits) if loss_profits else 1  # 避免除以零
+            
+            self.profit_ratio = avg_win / avg_loss if avg_loss > 0 else 0
+            
+            # 计算年化收益率
+            if len(standard_data) > period:
+                days = (standard_data.index[-1] - standard_data.index[period]).days
+                if days > 0:
+                    self.annual_return = ((self.current_capital / self.initial_capital) ** (365 / days)) - 1
+                else:
+                    self.annual_return = 0
+            else:
+                self.annual_return = 0
+            
+            logging.info(f"布林带策略回测完成: {symbol}, 总利润={self.total_profit:.2f}, "
+                       f"交易次数={self.trade_count}, 胜率={self.win_rate*100:.2f}%, "
+                       f"年化收益率={self.annual_return*100:.2f}%")
+            
+            return result
+            
+        except Exception as e:
+            import logging
+            import traceback
+            logging.error(f"布林带策略回测出错: {str(e)}")
+            logging.error(traceback.format_exc())
+            
+            # 设置默认值，避免属性错误
+            self.current_capital = self.initial_capital
+            self.win_rate = 0
+            self.trade_count = 0
+            self.total_profit = 0
+            self.max_drawdown = 0
+            self.sharpe_ratio = 0
+            self.profit_ratio = 0
+            self.annual_return = 0
+            self.avg_holding_period = 0
+            
+            return BacktestResult()
+
+    def _init_risk_params(self, data: pd.DataFrame):
+        """初始化风险控制参数，基于当前市场状态调整风险参数
+        
+        Args:
+            data: 股票数据，用于分析市场状态
+        """
+        try:
+            # 计算波动率
+            if 'close' in data.columns:
+                returns = data['close'].pct_change().dropna()
+            elif '收盘' in data.columns:
+                returns = data['收盘'].pct_change().dropna()
+            else:
+                returns = None
+                
+            if returns is not None and len(returns) > 20:
+                # 计算波动率
+                volatility = returns.std() * (252 ** 0.5)  # 年化波动率
+                
+                # 计算市场趋势强度
+                if 'close' in data.columns:
+                    price = data['close']
+                elif '收盘' in data.columns:
+                    price = data['收盘']
+                else:
+                    price = None
+                    
+                if price is not None and len(price) > 50:
+                    ma50 = price.rolling(window=50).mean()
+                    ma200 = price.rolling(window=200).mean()
+                    
+                    # 趋势强度
+                    if not ma50.empty and not ma200.empty:
+                        trend_strength = (ma50.iloc[-1] / ma200.iloc[-1] - 1) * 100  # 百分比形式
+                        self.market_trend_strength = max(-1, min(1, trend_strength / 10))  # 归一化到[-1, 1]
+                    
+                # 根据波动率调整参数
+                if volatility > 0.3:  # 高波动率
+                    self.market_volatility_percentile = 0.9
+                    self.max_position_ratio = 0.05  # 降低仓位
+                    self.trailing_stop_pct = 0.06  # 提高止损幅度
+                elif volatility > 0.2:  # 中高波动率
+                    self.market_volatility_percentile = 0.7
+                    self.max_position_ratio = 0.06
+                    self.trailing_stop_pct = 0.05
+                elif volatility > 0.15:  # 中等波动率
+                    self.market_volatility_percentile = 0.5
+                    self.max_position_ratio = 0.07
+                    self.trailing_stop_pct = 0.05
+                else:  # 低波动率
+                    self.market_volatility_percentile = 0.3
+                    self.max_position_ratio = 0.08
+                    self.trailing_stop_pct = 0.04  # 降低止损幅度
+                    
+                # 根据趋势强度调整参数
+                if hasattr(self, 'market_trend_strength'):
+                    if self.market_trend_strength > 0.5:  # 强上升趋势
+                        self.min_profit_ratio = 3.0  # 放宽止盈标准
+                        self.max_holding_days = 15  # 延长持仓时间
+                    elif self.market_trend_strength < -0.5:  # 强下降趋势
+                        self.min_profit_ratio = 4.0  # 提高止盈标准
+                        self.max_holding_days = 5  # 缩短持仓时间
+                    else:  # 震荡市场
+                        self.min_profit_ratio = 3.5
+                        self.max_holding_days = 10
+            
+        except Exception as e:
+            import logging
+            logging.error(f"初始化风险参数出错: {str(e)}")
+            
+            # 使用默认值
+            self.market_volatility_percentile = 0.5
+            self.max_position_ratio = 0.08
+            self.trailing_stop_pct = 0.05
+            self.min_profit_ratio = 3.5
+            self.max_holding_days = 10
+
+    def _calculate_trailing_stop(self, row):
+        """计算移动止损价格
+        
+        Args:
+            row: 数据行
+            
+        Returns:
+            移动止损价格
+        """
+        try:
+            # 如果没有ATR，返回0
+            if 'ATR' not in row:
+                return 0
+                
+            # 计算基础止损价格
+            if 'Dynamic_Stop' in row:
+                # 使用已经计算的动态止损
+                stop_price = row['Dynamic_Stop']
+            else:
+                # 使用ATR计算止损
+                stop_price = row['收盘'] - 2 * row['ATR']
+                
+            return stop_price
+            
+        except Exception as e:
+            import logging
+            logging.error(f"计算移动止损价格时出错: {str(e)}")
+            return 0
+
+    def _calculate_position_size(self, data):
+        """计算每行数据的动态仓位大小
+        
+        Args:
+            data: 包含价格和技术指标的DataFrame
+            
+        Returns:
+            包含仓位大小的Series
+        """
+        try:
+            # 获取价格和ATR
+            if 'close' in data.columns:
+                price = data['close']
+            elif '收盘' in data.columns:
+                price = data['收盘']
+            else:
+                return pd.Series(0, index=data.index)
+                
+            if 'ATR' in data.columns:
+                atr = data['ATR']
+            else:
+                atr = self._calculate_atr(data)
+            
+            # 计算仓位大小
+            position_sizes = pd.Series(index=data.index)
+            
+            for i in range(len(data)):
+                current_price = price.iloc[i]
+                
+                # 计算止损距离
+                stop_loss_distance = 2 * atr.iloc[i]
+                
+                # 计算每手风险金额
+                risk_per_unit = stop_loss_distance * 100  # 假设每手100股
+                
+                # 计算总风险金额（账户的1%）
+                total_risk_amount = self.initial_capital * 0.01
+                
+                # 计算可以承担的手数
+                units = total_risk_amount / risk_per_unit
+                
+                # 限制最大仓位
+                max_units = (self.initial_capital * self.max_position_ratio) / (current_price * 100)
+                units = min(units, max_units)
+                
+                # 保存到Series
+                position_sizes.iloc[i] = max(0, units * 100)  # 转换为股数
+            
+            return position_sizes
+            
+        except Exception as e:
+            import logging
+            logging.error(f"计算动态仓位大小时出错: {str(e)}")
+            return pd.Series(0, index=data.index)

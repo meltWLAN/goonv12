@@ -40,10 +40,16 @@ class EnhancedSectorIntegrator:
         self.sector_code_map = self._load_sector_code_map()
         
         # 检查增强版分析器可用性
+        self.use_fixed_version = False
         self.enhanced_available = self._check_enhanced_analyzer()
         
         if self.enhanced_available:
-            from enhanced_sector_analyzer import EnhancedSectorAnalyzer
+            # 根据检查结果选择正确的分析器
+            if self.use_fixed_version:
+                from enhanced_sector_analyzer_fixed import EnhancedSectorAnalyzer
+            else:
+                from enhanced_sector_analyzer import EnhancedSectorAnalyzer
+                
             self.analyzer = EnhancedSectorAnalyzer(cache_dir=self.cache_dir)
             
             from sector_technical_analysis import SectorTechnicalAnalyzer
@@ -67,11 +73,22 @@ class EnhancedSectorIntegrator:
     def _check_enhanced_analyzer(self) -> bool:
         """检查增强版分析器是否可用"""
         try:
-            # 尝试导入增强版分析器模块
+            # 首先尝试导入修复版分析器
+            try:
+                from enhanced_sector_analyzer_fixed import EnhancedSectorAnalyzer
+                self.use_fixed_version = True
+                logger.info("使用修复版增强型行业分析器")
+                return True
+            except ImportError:
+                self.use_fixed_version = False
+                logger.info("未找到修复版增强型行业分析器，尝试使用原始版本")
+            
+            # 尝试导入原始版分析器
             from enhanced_sector_analyzer import EnhancedSectorAnalyzer
             # 尝试导入行业技术分析模块
             from sector_technical_analysis import SectorTechnicalAnalyzer
             
+            logger.info("使用原始版增强型行业分析器")
             return True
         except ImportError as e:
             logger.error(f"增强版行业分析器导入失败: {e}")
@@ -99,6 +116,12 @@ class EnhancedSectorIntegrator:
             # 添加增强版标记
             if result['status'] == 'success':
                 result['data']['source'] = 'enhanced'
+                
+                # 确保存在market_trend字段
+                if 'market_trend' not in result['data']:
+                    # 默认添加一个中性的趋势
+                    result['data']['market_trend'] = 'neutral'
+                    result['data']['market_chg_pct'] = 0.0
             
             return result
         except Exception as e:
@@ -304,19 +327,36 @@ class EnhancedSectorIntegrator:
                 if tech_result['status'] == 'success':
                     sector['technical'] = tech_result['data']
             
+            # 从市场概览中提取市场趋势
+            market_trend = hot_sectors_result['data'].get('market_trend', 'neutral')
+            market_chg_pct = hot_sectors_result['data'].get('market_chg_pct', 0.0)
+            market_status = hot_sectors_result['data'].get('market_status', '正常')
+            market_comment = self._get_market_comment(market_trend)
+            
+            # 生成建议
+            recommendations = self._generate_recommendations(top_sectors)
+            
+            # 提取风险因素
+            risk_factors = []
+            for rec in recommendations:
+                if 'risk_factors' in rec:
+                    for risk in rec.get('risk_factors', []):
+                        if risk not in risk_factors:
+                            risk_factors.append(risk)
+            
             # 生成报告
             report = {
                 'status': 'success',
                 'data': {
                     'title': '行业投资分析报告',
                     'date': datetime.now().strftime('%Y-%m-%d'),
-                    'market_overview': {
-                        'trend': hot_sectors_result['data'].get('market_trend', 'neutral'),
-                        'change': hot_sectors_result['data'].get('market_chg_pct', 0.0),
-                        'comment': self._get_market_comment(hot_sectors_result['data'].get('market_trend', 'neutral'))
-                    },
+                    'market_trend': market_trend,
+                    'market_chg_pct': market_chg_pct,
+                    'market_status': market_status,
+                    'market_comment': market_comment,
                     'hot_sectors': top_sectors,
-                    'recommendations': self._generate_recommendations(top_sectors),
+                    'recommendations': recommendations,
+                    'risk_factors': risk_factors,
                     'update_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                     'source': 'enhanced'
                 }
@@ -353,10 +393,29 @@ class EnhancedSectorIntegrator:
                 continue
             
             tech = sector['technical']
+            
+            # 获取交易信号
+            trade_action = tech.get('trade_signal', {}).get('action', '观望')
+            trade_strength = tech.get('trade_signal', {}).get('strength', '中等')
+            trade_description = tech.get('trade_signal', {}).get('description', '')
+            
+            # 生成理由文本
+            reason = trade_description
+            if not reason:
+                if 'bullish' in trade_action.lower() or '买入' in trade_action or '看多' in trade_action:
+                    reason = f"{sector['name']}行业技术指标走强，热度{sector.get('hot_level', '中等')}，建议关注"
+                elif 'bearish' in trade_action.lower() or '卖出' in trade_action or '看空' in trade_action:
+                    reason = f"{sector['name']}行业技术指标走弱，可能面临调整，建议谨慎"
+                else:
+                    reason = f"{sector['name']}行业技术面中性，可持续观察"
+            
             recommendation = {
                 'sector': sector['name'],
                 'rating': '★★★★★' if i == 0 else '★★★★' if i == 1 else '★★★' if i <= 3 else '★★',
-                'investment_advice': tech.get('trade_signal', {}).get('action', ''),
+                'investment_advice': trade_action,
+                'action': trade_action,  # 添加action字段，与analyze_sectors方法兼容
+                'reason': reason,  # 添加reason字段，与analyze_sectors方法兼容
+                'strength': trade_strength,
                 'key_points': [
                     f"行业热度: {sector.get('hot_level', '未知')}",
                     f"技术评分: {tech.get('tech_score', 0)}/100",
@@ -412,7 +471,7 @@ if __name__ == "__main__":
         report = integrator.generate_investment_report()
         if report['status'] == 'success':
             print(f"\n{report['data']['title']} ({report['data']['date']})")
-            print(f"市场概况: {report['data']['market_overview']['comment']}")
+            print(f"市场概况: {report['data']['market_comment']}")
             print("\n投资建议:")
             for rec in report['data']['recommendations']:
                 print(f"{rec['rating']} {rec['sector']}: {rec['investment_advice']}") 

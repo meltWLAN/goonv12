@@ -1,0 +1,24 @@
+{
+    "stocks": [
+        {
+            "symbol": "688580",
+            "name": "伟思医疗",
+            "date_added": "2025-05-02",
+            "status": "watching",
+            "buy_price": null,
+            "sell_price": null,
+            "buy_date": null,
+            "sell_date": null,
+            "profit_percent": null,
+            "holding_days": null,
+            "notes": "",
+            "source": "全市场分析",
+            "analysis_score": 68.5,
+            "market_status": "中性",
+            "technical_indicators": {
+                "MACD": {
+                    "macd": 2.4738082217933695,
+                    "signal": 1.692946863739662,
+                    "hist": 0.7808613580537074,
+                    "trend": "bullish",
+                    "crossover": 

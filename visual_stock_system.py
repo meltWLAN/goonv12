@@ -294,8 +294,20 @@ class VisualStockSystem(QMainWindow):
             print(f"数据类型错误，预期DataFrame，实际为{type(df)}")
             return None
             
-        if len(df) < 5:  # 降低最小数据要求以增加兼容性
-            print("数据点数不足，无法计算动量指标")
+        # 降低最小数据点要求到3个点，以增加兼容性
+        if len(df) < 3:  
+            print("数据点数过少(少于3个点)，无法计算动量指标")
+            # 创建一个基本结构，避免后续分析出错
+            if len(df) > 0:
+                df = df.copy()
+                close_column = next((col for col in ['close', 'Close', 'CLOSE'] if col in df.columns), None)
+                if close_column:
+                    # 为每个缺失的指标添加一个基本的值
+                    df['EMA21'] = df[close_column]
+                    df['MACD'] = 0.0
+                    df['MACD_Signal'] = 0.0
+                    df['MACD_Hist'] = 0.0
+                    return df
             return df
             
         df = df.copy()
@@ -340,75 +352,88 @@ class VisualStockSystem(QMainWindow):
             if df[close_column].isnull().any():
                 print(f"收盘价列存在缺失值，进行前向填充")
                 df[close_column] = df[close_column].fillna(method='ffill').fillna(method='bfill')
-                
-            # 计算EMA
-            df['EMA21'] = ta.EMA(df[close_column].values, timeperiod=21)
             
-            # 计算MACD
-            macd, signal, hist = ta.MACD(df[close_column].values)
-            df['MACD'] = macd
-            df['MACD_Signal'] = signal
-            df['MACD_Hist'] = hist
+            # 根据数据点数量使用不同的计算方法
+            data_length = len(df)
             
-            # 确保指标数据已生成且没有全为NaN
+            # 当数据量充足时使用talib计算准确指标
+            if data_length >= 30:
+                try:
+                    # 标准计算方法
+                    df['EMA21'] = ta.EMA(df[close_column].values, timeperiod=21)
+                    macd, signal, hist = ta.MACD(df[close_column].values)
+                    df['MACD'] = macd
+                    df['MACD_Signal'] = signal
+                    df['MACD_Hist'] = hist
+                except Exception as e:
+                    print(f"使用talib计算指标失败: {str(e)}，使用替代方法")
+                    self._calculate_simplified_indicators(df, close_column)
+            else:
+                # 数据量不足，使用简化的计算方法
+                print(f"数据点数不足({data_length}个点)，使用简化方法计算指标")
+                self._calculate_simplified_indicators(df, close_column)
+            
+            # 确保指标数据已生成且没有NaN
             for indicator in ['EMA21', 'MACD', 'MACD_Signal', 'MACD_Hist']:
                 if indicator not in df.columns:
-                    print(f"计算{indicator}失败，尝试替代方法")
-                    if indicator == 'EMA21':
-                        # 简单替代：使用移动平均线
-                        df['EMA21'] = df[close_column].rolling(window=21, min_periods=1).mean()
-                    elif indicator == 'MACD':
-                        # 简单替代：计算两个移动平均线之间的差
-                        df['MACD'] = df[close_column].rolling(window=12, min_periods=1).mean() - df[close_column].rolling(window=26, min_periods=1).mean()
-                    elif indicator == 'MACD_Signal':
-                        # 如果MACD存在，计算其的移动平均线
-                        if 'MACD' in df.columns:
-                            df['MACD_Signal'] = df['MACD'].rolling(window=9, min_periods=1).mean()
-                        else:
-                            df['MACD_Signal'] = 0.0
-                    elif indicator == 'MACD_Hist':
-                        # 如果MACD和Signal存在，计算直方图
-                        if 'MACD' in df.columns and 'MACD_Signal' in df.columns:
-                            df['MACD_Hist'] = df['MACD'] - df['MACD_Signal']
-                        else:
-                            df['MACD_Hist'] = 0.0
-                elif df[indicator].isnull().all():
-                    print(f"{indicator}全为NaN，尝试替代方法")
-                    if indicator == 'EMA21':
-                        df['EMA21'] = df[close_column].rolling(window=21, min_periods=1).mean()
-                    elif indicator == 'MACD':
-                        df['MACD'] = df[close_column].rolling(window=12, min_periods=1).mean() - df[close_column].rolling(window=26, min_periods=1).mean()
-                    elif indicator == 'MACD_Signal':
-                        if 'MACD' in df.columns:
-                            df['MACD_Signal'] = df['MACD'].rolling(window=9, min_periods=1).mean()
-                        else:
-                            df['MACD_Signal'] = 0.0
-                    elif indicator == 'MACD_Hist':
-                        if 'MACD' in df.columns and 'MACD_Signal' in df.columns:
-                            df['MACD_Hist'] = df['MACD'] - df['MACD_Signal']
-                        else:
-                            df['MACD_Hist'] = 0.0
+                    print(f"计算{indicator}失败，创建替代列")
+                    self._create_fallback_indicator(df, indicator, close_column)
                 elif df[indicator].isnull().any():
-                    # 填充剩余的NaN值
+                    print(f"{indicator}含有NaN值，进行填充")
                     df[indicator] = df[indicator].ffill().bfill().fillna(0.0)
+        
         except Exception as e:
             print(f"计算动量指标时出错: {str(e)}")
-            # 如果出错，尝试创建简化的指标
-            df['EMA21'] = df[close_column].rolling(window=21, min_periods=1).mean()
-            df['MACD'] = df[close_column].rolling(window=12, min_periods=1).mean() - df[close_column].rolling(window=26, min_periods=1).mean()
-            df['MACD_Signal'] = df['MACD'].rolling(window=9, min_periods=1).mean() if 'MACD' in df.columns else 0.0
-            df['MACD_Hist'] = df['MACD'] - df['MACD_Signal'] if 'MACD' in df.columns and 'MACD_Signal' in df.columns else 0.0
-        
-        # 验证指标是否已成功创建
-        required_indicators = ['EMA21', 'MACD', 'MACD_Signal', 'MACD_Hist']
-        missing_indicators = [ind for ind in required_indicators if ind not in df.columns]
-        if missing_indicators:
-            print(f"警告：动量分析仍然缺少指标: {', '.join(missing_indicators)}")
-            # 最后一次尝试创建缺失的指标
-            for ind in missing_indicators:
-                df[ind] = 0.0  # 使用默认值
+            # 如果出错，创建所有需要的指标列
+            self._create_all_fallback_indicators(df, close_column)
         
         return df
+        
+    def _calculate_simplified_indicators(self, df, close_column):
+        """使用简化方法计算技术指标"""
+        # 简化的EMA计算 - 使用较小的窗口和最小周期
+        window_size = min(21, len(df) - 1)
+        min_periods = max(1, min(window_size // 2, len(df) - 1))
+        df['EMA21'] = df[close_column].ewm(span=window_size, min_periods=min_periods).mean()
+        
+        # 简化的MACD计算
+        if len(df) >= 9:
+            # 尽可能使用标准参数但降低最小周期要求
+            fast_window = min(12, len(df) - 1)
+            slow_window = min(26, len(df) - 1)
+            signal_window = min(9, len(df) - 1)
+            
+            df['MACD_Fast'] = df[close_column].ewm(span=fast_window, min_periods=min_periods).mean()
+            df['MACD_Slow'] = df[close_column].ewm(span=slow_window, min_periods=min_periods).mean()
+            df['MACD'] = df['MACD_Fast'] - df['MACD_Slow']
+            df['MACD_Signal'] = df['MACD'].ewm(span=signal_window, min_periods=min_periods).mean()
+            df['MACD_Hist'] = df['MACD'] - df['MACD_Signal']
+            
+            # 清理临时列
+            df.drop(['MACD_Fast', 'MACD_Slow'], axis=1, inplace=True, errors='ignore')
+        else:
+            # 数据极少，使用最简单的计算
+            df['MACD'] = df[close_column].diff(1)
+            df['MACD_Signal'] = df['MACD'].rolling(window=2, min_periods=1).mean()
+            df['MACD_Hist'] = df['MACD'] - df['MACD_Signal']
+            
+    def _create_fallback_indicator(self, df, indicator, close_column):
+        """为缺失的指标创建替代列"""
+        if indicator == 'EMA21':
+            df['EMA21'] = df[close_column]
+        elif indicator == 'MACD':
+            df['MACD'] = 0.0
+        elif indicator == 'MACD_Signal':
+            df['MACD_Signal'] = 0.0
+        elif indicator == 'MACD_Hist':
+            df['MACD_Hist'] = 0.0
+            
+    def _create_all_fallback_indicators(self, df, close_column):
+        """创建所有必要的替代指标"""
+        df['EMA21'] = df[close_column]
+        df['MACD'] = 0.0
+        df['MACD_Signal'] = 0.0
+        df['MACD_Hist'] = 0.0
 
     def analyze_volume_price(self, df):
         """量价分析

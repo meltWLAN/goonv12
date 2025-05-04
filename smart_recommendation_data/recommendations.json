@@ -1,30 +1,5 @@
 {
     "current": {
-        "688787": {
-            "stock_code": "688787",
-            "stock_name": "688787",
-            "recommendation_date": "2025-05-03 21:44:50",
-            "entry_price": 97.78,
-            "target_price": 112.44699999999999,
-            "stop_loss": 89.9576,
-            "reason": "强烈推荐买入。技术面：uptrend趋势，MACD金叉信号(2.0227)，成交量放大(2.05倍)",
-            "source": "全市场扫描",
-            "score": 95.0,
-            "tags": [
-                "上升趋势",
-                "MACD金叉",
-                "成交量放大"
-            ],
-            "status": "active",
-            "actual_entry": {},
-            "actual_exit": {},
-            "technical_indicators": {},
-            "performance_metrics": {},
-            "risk": 8.000000000000002,
-            "reward": 14.999999999999986,
-            "risk_reward_ratio": 1.8749999999999978,
-            "last_update": "2025-05-03 23:17:05"
-        },
         "301085": {
             "stock_code": "301085",
             "stock_name": "301085",
@@ -48,7 +23,7 @@
             "risk": 7.999999999999997,
             "reward": 15.000000000000002,
             "risk_reward_ratio": 1.8750000000000009,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "301380": {
             "stock_code": "301380",
@@ -73,7 +48,7 @@
             "risk": 8.000000000000004,
             "reward": 14.999999999999986,
             "risk_reward_ratio": 1.8749999999999973,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "688258": {
             "stock_code": "688258",
@@ -97,7 +72,7 @@
             "risk": 7.999999999999993,
             "reward": 14.999999999999988,
             "risk_reward_ratio": 1.8750000000000002,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "300496": {
             "stock_code": "300496",
@@ -121,7 +96,7 @@
             "risk": 7.999999999999995,
             "reward": 14.999999999999991,
             "risk_reward_ratio": 1.8750000000000002,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "300766": {
             "stock_code": "300766",
@@ -146,7 +121,7 @@
             "risk": 7.9999999999999964,
             "reward": 14.999999999999982,
             "risk_reward_ratio": 1.8749999999999987,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "301382": {
             "stock_code": "301382",
@@ -171,7 +146,7 @@
             "risk": 7.999999999999993,
             "reward": 14.999999999999991,
             "risk_reward_ratio": 1.8750000000000007,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "301413": {
             "stock_code": "301413",
@@ -195,7 +170,7 @@
             "risk": 7.99999999999999,
             "reward": 14.999999999999986,
             "risk_reward_ratio": 1.8750000000000004,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "600563": {
             "stock_code": "600563",
@@ -219,7 +194,7 @@
             "risk": 7.999999999999989,
             "reward": 14.999999999999996,
             "risk_reward_ratio": 1.875000000000002,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "688800": {
             "stock_code": "688800",
@@ -243,7 +218,7 @@
             "risk": 7.999999999999993,
             "reward": 14.999999999999995,
             "risk_reward_ratio": 1.875000000000001,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "688322": {
             "stock_code": "688322",
@@ -267,7 +242,7 @@
             "risk": 8.0,
             "reward": 14.999999999999982,
             "risk_reward_ratio": 1.8749999999999978,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "688629": {
             "stock_code": "688629",
@@ -291,7 +266,7 @@
             "risk": 7.999999999999995,
             "reward": 14.999999999999995,
             "risk_reward_ratio": 1.8750000000000007,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "300124": {
             "stock_code": "300124",
@@ -316,7 +291,7 @@
             "risk": 7.999999999999995,
             "reward": 14.999999999999982,
             "risk_reward_ratio": 1.8749999999999991,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "301328": {
             "stock_code": "301328",
@@ -340,7 +315,7 @@
             "risk": 7.999999999999995,
             "reward": 15.0,
             "risk_reward_ratio": 1.8750000000000013,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "301577": {
             "stock_code": "301577",
@@ -364,7 +339,7 @@
             "risk": 8.000000000000002,
             "reward": 14.999999999999988,
             "risk_reward_ratio": 1.874999999999998,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "001298": {
             "stock_code": "001298",
@@ -389,7 +364,7 @@
             "risk": 7.999999999999995,
             "reward": 14.999999999999996,
             "risk_reward_ratio": 1.8750000000000009,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "603186": {
             "stock_code": "603186",
@@ -414,7 +389,7 @@
             "risk": 7.999999999999997,
             "reward": 14.999999999999996,
             "risk_reward_ratio": 1.8750000000000002,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "688256": {
             "stock_code": "688256",
@@ -438,7 +413,7 @@
             "risk": 8.000000000000002,
             "reward": 14.999999999999995,
             "risk_reward_ratio": 1.874999999999999,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "688608": {
             "stock_code": "688608",
@@ -462,7 +437,7 @@
             "risk": 7.999999999999997,
             "reward": 14.999999999999988,
             "risk_reward_ratio": 1.8749999999999991,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "688279": {
             "stock_code": "688279",
@@ -486,7 +461,7 @@
             "risk": 7.9999999999999964,
             "reward": 14.999999999999991,
             "risk_reward_ratio": 1.8749999999999998,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "688018": {
             "stock_code": "688018",
@@ -511,7 +486,7 @@
             "risk": 7.999999999999999,
             "reward": 14.999999999999995,
             "risk_reward_ratio": 1.8749999999999996,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "603986": {
             "stock_code": "603986",
@@ -536,7 +511,7 @@
             "risk": 7.9999999999999964,
             "reward": 14.999999999999988,
             "risk_reward_ratio": 1.8749999999999993,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "688498": {
             "stock_code": "688498",
@@ -560,7 +535,7 @@
             "risk": 8.000000000000002,
             "reward": 15.0,
             "risk_reward_ratio": 1.8749999999999996,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "301536": {
             "stock_code": "301536",
@@ -585,7 +560,7 @@
             "risk": 7.9999999999999964,
             "reward": 15.0,
             "risk_reward_ratio": 1.8750000000000009,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "688286": {
             "stock_code": "688286",
@@ -610,7 +585,7 @@
             "risk": 7.999999999999995,
             "reward": 14.999999999999991,
             "risk_reward_ratio": 1.8750000000000002,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "603501": {
             "stock_code": "603501",
@@ -635,7 +610,7 @@
             "risk": 7.9999999999999964,
             "reward": 14.999999999999995,
             "risk_reward_ratio": 1.8750000000000002,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
         },
         "603893": {
             "stock_code": "603893",
@@ -660,9 +635,712 @@
             "risk": 7.9999999999999964,
             "reward": 14.999999999999988,
             "risk_reward_ratio": 1.8749999999999993,
-            "last_update": "2025-05-03 23:17:05"
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "600822": {
+            "stock_code": "600822",
+            "stock_name": "上海物贸",
+            "recommendation_date": "2025-05-04 09:15:18",
+            "entry_price": 10.88,
+            "target_price": 12.512,
+            "stop_loss": 10.0096,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大1.9倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 8.0,
+            "reward": 14.999999999999996,
+            "risk_reward_ratio": 1.8749999999999996,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "300345": {
+            "stock_code": "300345",
+            "stock_name": "华民股份",
+            "recommendation_date": "2025-05-04 09:25:15",
+            "entry_price": 8.26,
+            "target_price": 9.498999999999999,
+            "stop_loss": 7.5992,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大1.7倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 8.0,
+            "reward": 14.999999999999988,
+            "risk_reward_ratio": 1.8749999999999984,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "603185": {
+            "stock_code": "603185",
+            "stock_name": "弘元绿能",
+            "recommendation_date": "2025-05-04 09:25:15",
+            "entry_price": 14.2,
+            "target_price": 16.33,
+            "stop_loss": 13.064,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大2.4倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 7.999999999999995,
+            "reward": 14.999999999999995,
+            "risk_reward_ratio": 1.8750000000000007,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "002623": {
+            "stock_code": "002623",
+            "stock_name": "亚玛顿",
+            "recommendation_date": "2025-05-04 09:25:15",
+            "entry_price": 14.43,
+            "target_price": 16.5945,
+            "stop_loss": 13.2756,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大1.6倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 7.999999999999993,
+            "reward": 15.000000000000002,
+            "risk_reward_ratio": 1.875000000000002,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "001339": {
+            "stock_code": "001339",
+            "stock_name": "智微智能",
+            "recommendation_date": "2025-05-04 09:33:50",
+            "entry_price": 52.02,
+            "target_price": 59.823,
+            "stop_loss": 47.8584,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大1.7倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 7.999999999999999,
+            "reward": 14.999999999999995,
+            "risk_reward_ratio": 1.8749999999999996,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "000034": {
+            "stock_code": "000034",
+            "stock_name": "神州数码",
+            "recommendation_date": "2025-05-04 09:33:50",
+            "entry_price": 40.75,
+            "target_price": 46.8625,
+            "stop_loss": 37.49,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大2.0倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 7.999999999999995,
+            "reward": 14.999999999999995,
+            "risk_reward_ratio": 1.8750000000000007,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "000977": {
+            "stock_code": "000977",
+            "stock_name": "浪潮信息",
+            "recommendation_date": "2025-05-04 09:33:50",
+            "entry_price": 50.85,
+            "target_price": 58.4775,
+            "stop_loss": 46.782000000000004,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大1.7倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 7.9999999999999964,
+            "reward": 14.999999999999995,
+            "risk_reward_ratio": 1.8750000000000002,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "870976": {
+            "stock_code": "870976",
+            "stock_name": "视声智能",
+            "recommendation_date": "2025-05-04 09:33:50",
+            "entry_price": 28.1,
+            "target_price": 32.315,
+            "stop_loss": 25.852000000000004,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大2.1倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 7.99999999999999,
+            "reward": 14.999999999999986,
+            "risk_reward_ratio": 1.8750000000000004,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "002376": {
+            "stock_code": "002376",
+            "stock_name": "新北洋",
+            "recommendation_date": "2025-05-04 09:33:50",
+            "entry_price": 6.62,
+            "target_price": 7.6129999999999995,
+            "stop_loss": 6.090400000000001,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大4.1倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 7.99999999999999,
+            "reward": 14.999999999999991,
+            "risk_reward_ratio": 1.875000000000001,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "688205": {
+            "stock_code": "688205",
+            "stock_name": "德科立",
+            "recommendation_date": "2025-05-04 09:58:37",
+            "entry_price": 59.7,
+            "target_price": 68.655,
+            "stop_loss": 54.92400000000001,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大2.8倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 7.999999999999993,
+            "reward": 14.999999999999996,
+            "risk_reward_ratio": 1.8750000000000013,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "002983": {
+            "stock_code": "002983",
+            "stock_name": "芯瑞达",
+            "recommendation_date": "2025-05-04 09:58:37",
+            "entry_price": 19.61,
+            "target_price": 22.551499999999997,
+            "stop_loss": 18.0412,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大1.7倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 7.999999999999997,
+            "reward": 14.999999999999988,
+            "risk_reward_ratio": 1.8749999999999991,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "001326": {
+            "stock_code": "001326",
+            "stock_name": "联域股份",
+            "recommendation_date": "2025-05-04 09:58:37",
+            "entry_price": 31.47,
+            "target_price": 36.19049999999999,
+            "stop_loss": 28.9524,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大1.9倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 7.999999999999995,
+            "reward": 14.999999999999982,
+            "risk_reward_ratio": 1.8749999999999991,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "001373": {
+            "stock_code": "001373",
+            "stock_name": "翔腾新材",
+            "recommendation_date": "2025-05-04 09:58:37",
+            "entry_price": 28.44,
+            "target_price": 32.705999999999996,
+            "stop_loss": 26.164800000000003,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大1.6倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 7.999999999999993,
+            "reward": 14.99999999999998,
+            "risk_reward_ratio": 1.8749999999999991,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "002189": {
+            "stock_code": "002189",
+            "stock_name": "中光学",
+            "recommendation_date": "2025-05-04 09:58:37",
+            "entry_price": 19.26,
+            "target_price": 22.149,
+            "stop_loss": 17.7192,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大2.8倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 8.000000000000004,
+            "reward": 14.999999999999996,
+            "risk_reward_ratio": 1.8749999999999987,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "002436": {
+            "stock_code": "002436",
+            "stock_name": "兴森科技",
+            "recommendation_date": "2025-05-04 10:21:36",
+            "entry_price": 12.52,
+            "target_price": 14.397999999999998,
+            "stop_loss": 11.5184,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大2.2倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 7.999999999999999,
+            "reward": 14.999999999999988,
+            "risk_reward_ratio": 1.8749999999999987,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "603989": {
+            "stock_code": "603989",
+            "stock_name": "艾华集团",
+            "recommendation_date": "2025-05-04 10:21:36",
+            "entry_price": 15.09,
+            "target_price": 17.353499999999997,
+            "stop_loss": 13.8828,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大2.7倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 8.000000000000002,
+            "reward": 14.99999999999998,
+            "risk_reward_ratio": 1.8749999999999971,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "688655": {
+            "stock_code": "688655",
+            "stock_name": "迅捷兴",
+            "recommendation_date": "2025-05-04 10:21:36",
+            "entry_price": 15.0,
+            "target_price": 17.25,
+            "stop_loss": 13.8,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大1.6倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 7.999999999999995,
+            "reward": 15.0,
+            "risk_reward_ratio": 1.8750000000000013,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "301372": {
+            "stock_code": "301372",
+            "stock_name": "科净源",
+            "recommendation_date": "2025-05-04 10:27:00",
+            "entry_price": 18.75,
+            "target_price": 21.5625,
+            "stop_loss": 17.25,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大3.1倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 8.0,
+            "reward": 15.0,
+            "risk_reward_ratio": 1.875,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "300867": {
+            "stock_code": "300867",
+            "stock_name": "圣元环保",
+            "recommendation_date": "2025-05-04 10:27:00",
+            "entry_price": 15.69,
+            "target_price": 18.043499999999998,
+            "stop_loss": 14.434800000000001,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大1.6倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 7.99999999999999,
+            "reward": 14.999999999999991,
+            "risk_reward_ratio": 1.875000000000001,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "300854": {
+            "stock_code": "300854",
+            "stock_name": "中兰环保",
+            "recommendation_date": "2025-05-04 10:27:00",
+            "entry_price": 14.3,
+            "target_price": 16.445,
+            "stop_loss": 13.156,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大1.9倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 8.0,
+            "reward": 14.999999999999996,
+            "risk_reward_ratio": 1.8749999999999996,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "300929": {
+            "stock_code": "300929",
+            "stock_name": "华骐环保",
+            "recommendation_date": "2025-05-04 10:27:00",
+            "entry_price": 9.19,
+            "target_price": 10.568499999999998,
+            "stop_loss": 8.4548,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大1.5倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 7.999999999999989,
+            "reward": 14.999999999999988,
+            "risk_reward_ratio": 1.8750000000000009,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "688565": {
+            "stock_code": "688565",
+            "stock_name": "力源科技",
+            "recommendation_date": "2025-05-04 10:27:00",
+            "entry_price": 7.42,
+            "target_price": 8.533,
+            "stop_loss": 6.8264000000000005,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大1.6倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 7.999999999999993,
+            "reward": 14.999999999999995,
+            "risk_reward_ratio": 1.875000000000001,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "001306": {
+            "stock_code": "001306",
+            "stock_name": "夏厦精密",
+            "recommendation_date": "2025-05-04 10:36:18",
+            "entry_price": 88.0,
+            "target_price": 101.19999999999999,
+            "stop_loss": 80.96000000000001,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大1.9倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 7.99999999999999,
+            "reward": 14.999999999999988,
+            "risk_reward_ratio": 1.8750000000000007,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "301261": {
+            "stock_code": "301261",
+            "stock_name": "恒工精密",
+            "recommendation_date": "2025-05-04 10:36:18",
+            "entry_price": 95.45,
+            "target_price": 109.7675,
+            "stop_loss": 87.81400000000001,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大1.9倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 7.999999999999995,
+            "reward": 14.999999999999995,
+            "risk_reward_ratio": 1.8750000000000007,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "688003": {
+            "stock_code": "688003",
+            "stock_name": "天准科技",
+            "recommendation_date": "2025-05-04 10:36:18",
+            "entry_price": 53.12,
+            "target_price": 61.087999999999994,
+            "stop_loss": 48.8704,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大2.0倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 8.000000000000002,
+            "reward": 14.999999999999995,
+            "risk_reward_ratio": 1.874999999999999,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "300946": {
+            "stock_code": "300946",
+            "stock_name": "恒而达",
+            "recommendation_date": "2025-05-04 10:36:18",
+            "entry_price": 35.8,
+            "target_price": 41.169999999999995,
+            "stop_loss": 32.936,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大3.3倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 7.999999999999993,
+            "reward": 14.999999999999995,
+            "risk_reward_ratio": 1.875000000000001,
+            "last_update": "2025-05-04 10:36:18"
+        },
+        "301548": {
+            "stock_code": "301548",
+            "stock_name": "崇德科技",
+            "recommendation_date": "2025-05-04 10:36:18",
+            "entry_price": 47.93,
+            "target_price": 55.119499999999995,
+            "stop_loss": 44.095600000000005,
+            "reason": "技术分析推荐：强烈推荐买入。 处于上升趋势。 成交量放大1.7倍。",
+            "source": "股票分析系统",
+            "score": 85.0,
+            "tags": [
+                "技术分析",
+                "uptrend"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 7.99999999999999,
+            "reward": 14.999999999999991,
+            "risk_reward_ratio": 1.875000000000001,
+            "last_update": "2025-05-04 10:36:18"
         }
     },
-    "history": [],
-    "last_update": "2025-05-03 23:17:05"
+    "history": [
+        {
+            "stock_code": "000001",
+            "stock_name": "平安银行",
+            "recommendation_date": "2025-05-04 09:54:13",
+            "entry_price": 20.5,
+            "target_price": 23.58,
+            "stop_loss": 19.27,
+            "reason": "测试添加的推荐: MACD金叉，量能放大，突破前高",
+            "source": "测试系统",
+            "score": 92.0,
+            "tags": [
+                "测试标签",
+                "银行股",
+                "技术突破"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 6.000000000000002,
+            "reward": 15.024390243902431,
+            "risk_reward_ratio": 2.5040650406504046,
+            "last_update": "2025-05-04 09:54:13",
+            "removal_date": "2025-05-04 09:54:13",
+            "removal_reason": "测试完成"
+        },
+        {
+            "stock_code": "688787",
+            "stock_name": "688787",
+            "recommendation_date": "2025-05-03 21:44:50",
+            "entry_price": 97.78,
+            "target_price": 112.44699999999999,
+            "stop_loss": 89.9576,
+            "reason": "强烈推荐买入。技术面：uptrend趋势，MACD金叉信号(2.0227)，成交量放大(2.05倍)",
+            "source": "全市场扫描",
+            "score": 95.0,
+            "tags": [
+                "上升趋势",
+                "MACD金叉",
+                "成交量放大"
+            ],
+            "status": "active",
+            "actual_entry": {},
+            "actual_exit": {},
+            "technical_indicators": {},
+            "performance_metrics": {},
+            "risk": 8.000000000000002,
+            "reward": 14.999999999999986,
+            "risk_reward_ratio": 1.8749999999999978,
+            "last_update": "2025-05-04 10:34:43",
+            "removal_date": "2025-05-04 10:34:43",
+            "removal_reason": "手动删除"
+        }
+    ],
+    "last_update": "2025-05-04 10:36:18"
 }

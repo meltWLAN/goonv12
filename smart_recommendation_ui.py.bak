@@ -16,10 +16,9 @@ from PyQt5.QtWidgets import (
     QLabel, QPushButton, QTableWidget, QTableWidgetItem, QComboBox,
     QLineEdit, QSpinBox, QDoubleSpinBox, QTextEdit, QTabWidget,
     QGroupBox, QFormLayout, QDialog, QDialogButtonBox, QMessageBox,
-    QHeaderView, QSplitter, QFrame, QFileDialog, QInputDialog
+    QHeaderView, QSplitter, QFrame, QFileDialog
 )
-from PyQt5.QtCore import Qt, QUrl, pyqtSlot, QDate, QTimer
-
+from PyQt5.QtCore import Qt, QUrl, pyqtSlot, QDate
 from PyQt5.QtGui import QColor, QDesktopServices, QFont, QIcon
 
 # 导入推荐系统
@@ -318,16 +317,11 @@ class SmartRecommendationWidget(QWidget):
         
         # 清空表格
         self.recommendations_table.setRowCount(0)
-        print(f"表格已清空，准备填充 {len(filtered_recs)} 条记录")
-        # 设置表格可见性，确保表格显示
-        self.recommendations_table.setVisible(True)
-        # 更新UI
-        QApplication.processEvents()
         print("已清空表格，准备添加推荐数据")
         
         # 填充表格
-        print(f"开始填充表格，共有 {len(filtered_recs)} 个推荐要显示")
         for i, rec in enumerate(filtered_recs):
+        print(f"开始填充表格，共有 {len(filtered_recs)} 个推荐要显示")
             self.recommendations_table.insertRow(i)
             if i == 0: print(f"插入第一行: {rec.stock_code} {rec.stock_name}")
             
@@ -375,9 +369,6 @@ class SmartRecommendationWidget(QWidget):
         
         # 更新标签过滤器选项
         self.update_tag_filter()
-        
-        # 确保表格内容可见
-        QApplication.processEvents()
     
     def filter_recommendations(self, recommendations):
         print(f"过滤和排序 {len(recommendations)} 个推荐...")
@@ -414,19 +405,21 @@ class SmartRecommendationWidget(QWidget):
         
         # 应用排序
         sort_option = self.sort_combo.currentText()
-        print(f"应用排序: {sort_option}, 排序前有 {len(filtered)} 个推荐")
         if sort_option == "评分":
             filtered.sort(key=lambda x: x.score, reverse=True)
+        print(f"应用排序: {sort_option}, 排序前有 {len(filtered)} 个推荐")
         elif sort_option == "收益率":
             filtered.sort(
+        print(f"应用排序: {sort_option}, 排序前有 {len(filtered)} 个推荐")
                 key=lambda x: x.performance_metrics.get('current_return', 0), 
                 reverse=True
             )
         elif sort_option == "添加日期":
             filtered.sort(key=lambda x: x.recommendation_date, reverse=True)
+        print(f"应用排序: {sort_option}, 排序前有 {len(filtered)} 个推荐")
         
-        print(f"过滤后的推荐数: {len(filtered)}")
         return filtered
+        print(f"过滤和排序完成，返回 {len(filtered)} 个推荐")
     
     def load_history(self):
         """加载历史记录"""

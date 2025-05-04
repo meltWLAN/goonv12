@@ -95,21 +95,15 @@ class StockAnalyzerApp(QMainWindow):
         sector_btn.clicked.connect(self.analyze_sectors)
         control_layout.addWidget(sector_btn)
         
-        # 添加复盘功能按钮
-        review_btn = self.create_styled_button('股票复盘')
-        review_btn.clicked.connect(self.show_stock_review)
+        # 添加智能推荐功能按钮
+        review_btn = self.create_styled_button('智能推荐系统')
+        review_btn.clicked.connect(self.show_smart_recommendation)
         control_layout.addWidget(review_btn)
 
         # 添加体积价格分析按钮
         volume_price_btn = self.create_styled_button('体积价格分析')
         volume_price_btn.clicked.connect(self.analyze_volume_price)
         control_layout.addWidget(volume_price_btn)
-
-        # 添加智能推荐系统按钮
-        if HAS_SMART_RECOMMENDATION:
-            smart_recommendation_btn = self.create_styled_button('智能推荐系统')
-            smart_recommendation_btn.clicked.connect(self.show_smart_recommendation)
-            control_layout.addWidget(smart_recommendation_btn)
 
         control_layout.addStretch()
         layout.addLayout(control_layout)
@@ -210,21 +204,6 @@ class StockAnalyzerApp(QMainWindow):
             
             # 显示前10只股票
             self.display_analysis(sorted_recommendations[:10])
-            
-            # 将推荐股票添加到复盘池 - 使用增强版复盘模块
-            try:
-                # 尝试使用增强版复盘模块
-                from enhanced_stock_review import EnhancedStockReview
-                review = EnhancedStockReview(self.token)
-                added_count = review.add_recommendations_to_pool(sorted_recommendations)
-                self.result_text.append(f'\n已添加 {added_count} 只强烈推荐买入的股票到复盘池')
-            except Exception as e:
-                # 如果增强版失败，回退到基础版
-                from stock_review import StockReview
-                review = StockReview(self.token)
-                added_count = review.add_recommendations_to_pool(sorted_recommendations)
-                self.result_text.append(f'\n已添加 {added_count} 只强烈推荐买入的股票到复盘池')
-                self.result_text.append(f'注意: 增强版复盘模块加载失败，使用基础版: {str(e)}')
             
             # 将强烈推荐的股票添加到智能推荐系统
             if HAS_SMART_RECOMMENDATION:
@@ -536,166 +515,30 @@ class StockAnalyzerApp(QMainWindow):
         error_box.setStandardButtons(QMessageBox.Ok)
         error_box.exec_()
         
-    def show_stock_review(self):
-        """显示股票复盘功能"""
+    def show_smart_recommendation(self):
+        """显示智能推荐系统"""
         try:
-            # 尝试使用增强版复盘模块
-            try:
-                from enhanced_stock_review import EnhancedStockReview
-                # 初始化增强版复盘模块
-                review = EnhancedStockReview(self.token)
-                # 集成UI功能
-                review_functions = review.integrate_with_ui(self)
-                # 显示增强版复盘
-                review_functions['show_enhanced_review']()
-                
-                # 添加增强版功能按钮
-                self.add_enhanced_review_buttons(review_functions)
-                
-                return
-            except (ImportError, Exception) as e:
-                print(f"加载增强版复盘模块失败，将使用基础版：{str(e)}")
-                pass
-            
-            # 如果增强版加载失败，使用基础版
-            from stock_review import StockReview
-            
-            # 清空之前的结果
+            print("正在启动智能推荐系统...")
+            # 添加一个调试日志消息到控制台
             self.result_text.clear()
-            self.result_text.append('正在加载复盘数据...')
-            QApplication.processEvents()
+            self.result_text.append("正在启动智能推荐系统...")
+            QApplication.processEvents()  # 确保UI更新
             
-            # 初始化复盘模块
-            review = StockReview(self.token)
+            # 打开智能推荐系统界面
+            from smart_recommendation_ui import show_recommendation_ui
+            self.recommendation_window = show_recommendation_ui()
+            self.recommendation_window.raise_()
+            self.recommendation_window.activateWindow()
             
-            # 获取复盘股票池
-            all_stocks = review.get_review_pool()
-            watching_stocks = review.get_review_pool(status='watching')
-            bought_stocks = review.get_review_pool(status='bought')
-            sold_stocks = review.get_review_pool(status='sold')
-            
-            # 获取绩效统计
-            performance = review.get_performance_stats()
-            
-            # 格式化输出复盘结果
-            output = f"""股票复盘分析：
-
-复盘池概况：
-- 总股票数：{len(all_stocks)}只
-- 观察中：{len(watching_stocks)}只
-- 已买入：{len(bought_stocks)}只
-- 已卖出：{len(sold_stocks)}只
-
-交易绩效统计：
-- 总交易次数：{performance['total_trades']}次
-- 胜率：{performance['win_rate']}%
-- 平均收益：{performance['avg_profit']}%
-- 平均持仓天数：{performance['avg_holding_days']}天
-- 最大收益：{performance['max_profit']}%
-- 最大亏损：{performance['max_loss']}%
-- 总收益：{performance['total_profit']}%
-
-最近交易记录："""
-            
-            # 添加最近的交易记录
-            recent_trades = sorted(
-                [s for s in all_stocks if s['status'] == 'sold'],
-                key=lambda x: x.get('sell_date', ''),
-                reverse=True
-            )[:5]  # 最近5条记录
-            
-            if recent_trades:
-                for i, trade in enumerate(recent_trades, 1):
-                    profit_color = '红色' if trade.get('profit_percent', 0) > 0 else '绿色'
-                    output += f"\n{i}. {trade.get('name', '')}({trade.get('symbol', '')})："
-                    output += f"\n   - 买入日期：{trade.get('buy_date', '')}"
-                    output += f"\n   - 买入价格：{trade.get('buy_price', 0)}"
-                    output += f"\n   - 卖出日期：{trade.get('sell_date', '')}"
-                    output += f"\n   - 卖出价格：{trade.get('sell_price', 0)}"
-                    output += f"\n   - 收益率：{trade.get('profit_percent', 0)}%"
-                    output += f"\n   - 持有天数：{trade.get('holding_days', 0)}天"
-            else:
-                output += "\n暂无交易记录"
-                
-            # 添加当前持仓
-            output += "\n\n当前持仓："
-            if bought_stocks:
-                for i, stock in enumerate(bought_stocks, 1):
-                    output += f"\n{i}. {stock.get('name', '')}({stock.get('symbol', '')})："
-                    output += f"\n   - 买入日期：{stock.get('buy_date', '')}"
-                    output += f"\n   - 买入价格：{stock.get('buy_price', 0)}"
-                    output += f"\n   - 持有天数：{(datetime.now() - datetime.strptime(stock.get('buy_date', datetime.now().strftime('%Y-%m-%d')), '%Y-%m-%d')).days}天"
-            else:
-                output += "\n暂无持仓"
-                
-            # 添加观察中的股票
-            output += "\n\n观察中的股票："
-            if watching_stocks:
-                for i, stock in enumerate(watching_stocks, 1):  # 移除[:10]限制，显示所有观察中的股票
-                    output += f"\n{i}. {stock.get('name', '')}({stock.get('symbol', '')}) - 添加日期：{stock.get('date_added', '')}"
-                    output += f"\n   - 分析得分：{stock.get('analysis_score', 0)}"
-                    output += f"\n   - 市场状态：{stock.get('market_status', '')}"
-                    output += f"\n   - 来源：{stock.get('source', '')}"
-                    if stock.get('notes'):
-                        output += f"\n   - 备注：{stock.get('notes', '')}"
-            else:
-                output += "\n暂无观察中的股票"
-            
-            self.result_text.clear()
-            self.result_text.append(output)
-            
+            print("智能推荐系统启动完成")
         except Exception as e:
-            self.show_error_message('错误', f'加载复盘数据时出错：{str(e)}')
+            print(f"智能推荐系统启动失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            self.show_error_message('错误', f'启动智能推荐系统时出错：{str(e)}')
             self.result_text.clear()
             self.result_text.append(f'加载失败：{str(e)}')
-            
-    def add_enhanced_review_buttons(self, review_functions):
-        """添加增强版复盘功能按钮"""
-        try:
-            from PyQt5.QtWidgets import QPushButton, QHBoxLayout, QWidget
-            from PyQt5.QtCore import Qt
-            
-            # 创建按钮容器
-            if hasattr(self, 'review_button_container'):
-                # 如果已存在，先移除
-                self.review_button_container.deleteLater()
-                
-            self.review_button_container = QWidget()
-            button_layout = QHBoxLayout(self.review_button_container)
-            button_layout.setContentsMargins(0, 10, 0, 0)
-            button_layout.setSpacing(10)
-            
-            # 添加手动添加股票按钮
-            add_stock_btn = self.create_styled_button('添加股票')
-            add_stock_btn.clicked.connect(review_functions['add_stock_manually'])
-            button_layout.addWidget(add_stock_btn)
-            
-            # 添加自动跟踪按钮
-            review_instance = review_functions['review_instance']
-            tracking_btn = self.create_styled_button(
-                '停止自动跟踪' if review_instance.auto_tracking_enabled else '启动自动跟踪'
-            )
-            tracking_btn.clicked.connect(lambda: self.toggle_tracking_button(tracking_btn, review_functions))
-            button_layout.addWidget(tracking_btn)
-            
-            # 添加刷新按钮
-            refresh_btn = self.create_styled_button('刷新数据')
-            refresh_btn.clicked.connect(review_functions['show_enhanced_review'])
-            button_layout.addWidget(refresh_btn)
-            
-            # 添加到主布局
-            layout = self.centralWidget().layout()
-            layout.insertWidget(layout.count()-1, self.review_button_container)
-            
-        except Exception as e:
-            print(f"添加增强版复盘按钮失败：{str(e)}")
     
-    def toggle_tracking_button(self, button, review_functions):
-        """切换自动跟踪按钮状态"""
-        review_functions['toggle_auto_tracking']()
-        review_instance = review_functions['review_instance']
-        button.setText('停止自动跟踪' if review_instance.auto_tracking_enabled else '启动自动跟踪')
-        
     def analyze_sectors(self):
         """分析热门行业"""
         try:
@@ -851,14 +694,6 @@ class StockAnalyzerApp(QMainWindow):
             
         except Exception as e:
             return f"生成分析报告时出错：{str(e)}"
-
-    def show_smart_recommendation(self):
-        """显示智能推荐系统"""
-        try:
-            # 打开智能推荐系统界面
-            show_recommendation_ui()
-        except Exception as e:
-            self.show_error_message('错误', f'启动智能推荐系统时出错：{str(e)}')
 
 # 添加主入口代码
 if __name__ == "__main__":

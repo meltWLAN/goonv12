@@ -110,7 +110,7 @@ else
     
     # 推送到GitHub
     echo -e "${YELLOW}推送到GitHub...${NC}"
-    git push -u origin master
+    git push -u origin main
     git push --tags
     
     echo -e "${GREEN}备份已成功推送到 $github_url${NC}"

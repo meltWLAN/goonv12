@@ -10,6 +10,15 @@ from single_stock_analyzer import SingleStockAnalyzer
 import sys
 import logging
 
+# 导入智能推荐系统
+try:
+    from smart_recommendation_ui import show_recommendation_ui
+    from smart_recommendation_system import get_recommendation_system
+    HAS_SMART_RECOMMENDATION = True
+except ImportError:
+    HAS_SMART_RECOMMENDATION = False
+    logging.warning("智能推荐系统未找到，相关功能将被禁用")
+
 class StockAnalyzerApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -95,6 +104,12 @@ class StockAnalyzerApp(QMainWindow):
         volume_price_btn = self.create_styled_button('体积价格分析')
         volume_price_btn.clicked.connect(self.analyze_volume_price)
         control_layout.addWidget(volume_price_btn)
+
+        # 添加智能推荐系统按钮
+        if HAS_SMART_RECOMMENDATION:
+            smart_recommendation_btn = self.create_styled_button('智能推荐系统')
+            smart_recommendation_btn.clicked.connect(self.show_smart_recommendation)
+            control_layout.addWidget(smart_recommendation_btn)
 
         control_layout.addStretch()
         layout.addLayout(control_layout)
@@ -210,6 +225,60 @@ class StockAnalyzerApp(QMainWindow):
                 added_count = review.add_recommendations_to_pool(sorted_recommendations)
                 self.result_text.append(f'\n已添加 {added_count} 只强烈推荐买入的股票到复盘池')
                 self.result_text.append(f'注意: 增强版复盘模块加载失败，使用基础版: {str(e)}')
+            
+            # 将强烈推荐的股票添加到智能推荐系统
+            if HAS_SMART_RECOMMENDATION:
+                try:
+                    # 获取智能推荐系统实例
+                    smart_system = get_recommendation_system()
+                    
+                    # 过滤出强烈推荐买入的股票
+                    strong_recommendations = [r for r in sorted_recommendations 
+                                            if r.get('recommendation', '') == '强烈推荐买入' or
+                                               r.get('recommendation', '') == '建议买入']
+                    
+                    # 添加到智能推荐系统
+                    from smart_recommendation_system import create_recommendation, StockRecommendation
+                    added_to_smart = 0
+                    
+                    for rec in strong_recommendations[:5]:  # 限制只添加前5个最强推荐
+                        # 创建推荐对象
+                        stock_code = rec['symbol']
+                        stock_name = rec.get('name', rec.get('symbol', '未知'))
+                        current_price = rec.get('last_price', rec.get('close', 0))
+                        
+                        # 计算目标价和止损价
+                        target_price = current_price * 1.15  # 15%盈利目标
+                        stop_loss = current_price * 0.92    # 8%止损线
+                        
+                        # 构建推荐理由
+                        reason = f"技术分析推荐：{rec.get('recommendation', '建议买入')}。"
+                        if rec.get('trend') == 'uptrend':
+                            reason += " 处于上升趋势。"
+                        if rec.get('volume', 0) > rec.get('volume_ma20', 1):
+                            reason += f" 成交量放大{rec.get('volume', 0)/rec.get('volume_ma20', 1):.1f}倍。"
+                        
+                        # 添加推荐
+                        new_recommendation = create_recommendation(
+                            stock_code=stock_code,
+                            stock_name=stock_name,
+                            entry_price=current_price,
+                            target_price=target_price,
+                            stop_loss=stop_loss,
+                            reason=reason,
+                            source="股票分析系统",
+                            score=85.0,
+                            tags=["技术分析", rec.get('trend', 'unknown')]
+                        )
+                        
+                        if smart_system.add_recommendation(new_recommendation):
+                            added_to_smart += 1
+                    
+                    if added_to_smart > 0:
+                        self.result_text.append(f'\n已将 {added_to_smart} 只强烈推荐股票添加到智能推荐系统')
+                
+                except Exception as e:
+                    self.result_text.append(f'\n添加股票到智能推荐系统时出错: {str(e)}')
             
         except Exception as e:
             QMessageBox.warning(self, '错误', f'分析过程中出错：{str(e)}')
@@ -782,6 +851,14 @@ class StockAnalyzerApp(QMainWindow):
             
         except Exception as e:
             return f"生成分析报告时出错：{str(e)}"
+
+    def show_smart_recommendation(self):
+        """显示智能推荐系统"""
+        try:
+            # 打开智能推荐系统界面
+            show_recommendation_ui()
+        except Exception as e:
+            self.show_error_message('错误', f'启动智能推荐系统时出错：{str(e)}')
 
 # 添加主入口代码
 if __name__ == "__main__":

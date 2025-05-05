@@ -1,0 +1,13 @@
+# 行业分析模块API配置
+# 请在下方设置您的Tushare API token和其他API密钥
+# 格式：API名称=密钥值
+
+# Tushare API (https://tushare.pro/)
+# 请替换成您的token, 可从Tushare官网获取
+TUSHARE_TOKEN=0e65a5c636112dc9d9af5ccc93ef06c55987805b9467db0866185a10
+
+# 其他API设置可在下方添加
+# EXAMPLE_API_KEY=your_api_key_here
+
+# 提示：也可以通过环境变量设置这些密钥，优先级高于此文件
+# 例如：export TUSHARE_TOKEN=your_token_here 

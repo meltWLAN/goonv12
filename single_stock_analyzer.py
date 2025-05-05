@@ -3,7 +3,7 @@ import numpy as np
 import talib as ta
 import time
 from typing import Dict
-from visual_stock_system import VisualStockSystem
+from minimal_visual_stock_system import VisualStockSystem
 from jf_trading_system import JFTradingSystem
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache

@@ -1,14 +1,42 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+股票分析系统主入口
+集成了run.sh的功能，可以直接通过python stock_analyzer_app.py启动
+"""
+
+import os
+import sys
+import logging
+from optimized_sector_analyzer import OptimizedSectorAnalyzer  # 导入优化版行业分析器
+import traceback
+from datetime import datetime, timedelta
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
     QTextEdit, QApplication, QMessageBox, QInputDialog, QLabel, QFrame, QLineEdit, 
-    QTableWidget, QDateEdit, QSpinBox, QDoubleSpinBox, QComboBox, QHeaderView)
+    QTableWidget, QDateEdit, QSpinBox, QDoubleSpinBox, QComboBox, QHeaderView, QTabWidget,
+    QTableWidgetItem, QProgressBar)
 from PyQt5.QtCore import Qt, QDate
 from PyQt5.QtGui import QFont, QPalette, QColor
 from PyQt5.QtCore import Qt
 import pandas as pd
-from visual_stock_system import VisualStockSystem
+import numpy as np
+from minimal_visual_stock_system import VisualStockSystem
 from single_stock_analyzer import SingleStockAnalyzer
 import sys
 import logging
+from optimized_sector_analyzer import OptimizedSectorAnalyzer  # 导入优化版行业分析器
+# 导入行业分析器
+from sector_analyzer import SectorAnalyzer
+
+# 设置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    filename='system.log',
+    filemode='a'
+)
+logger = logging.getLogger('StockAnalyzerApp')
 
 # 导入智能推荐系统
 try:
@@ -18,6 +46,15 @@ try:
 except ImportError:
     HAS_SMART_RECOMMENDATION = False
     logging.warning("智能推荐系统未找到，相关功能将被禁用")
+
+# 保存进程ID
+def save_pid(pid_file='app.pid'):
+    """保存进程ID到文件中"""
+    try:
+        with open(pid_file, 'w') as f:
+            f.write(str(os.getpid()))
+    except Exception as e:
+        logger.error(f"保存PID文件失败: {e}")
 
 class StockAnalyzerApp(QMainWindow):
     def __init__(self):
@@ -90,11 +127,6 @@ class StockAnalyzerApp(QMainWindow):
         backtest_btn.clicked.connect(self.analyze_backtest)
         control_layout.addWidget(backtest_btn)
         
-        # 添加热门行业分析按钮
-        sector_btn = self.create_styled_button('热门行业')
-        sector_btn.clicked.connect(self.analyze_sectors)
-        control_layout.addWidget(sector_btn)
-        
         # 添加智能推荐功能按钮
         review_btn = self.create_styled_button('智能推荐系统')
         review_btn.clicked.connect(self.show_smart_recommendation)
@@ -104,6 +136,26 @@ class StockAnalyzerApp(QMainWindow):
         volume_price_btn = self.create_styled_button('体积价格分析')
         volume_price_btn.clicked.connect(self.analyze_volume_price)
         control_layout.addWidget(volume_price_btn)
+        
+        # 添加热门行业分析按钮
+        hot_industry_btn = self.create_styled_button('热门行业分析')
+        hot_industry_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #FF5722;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 5px 15px;
+            }
+            QPushButton:hover {
+                background-color: #E64A19;
+            }
+            QPushButton:pressed {
+                background-color: #BF360C;
+            }
+        """)
+        hot_industry_btn.clicked.connect(self.analyze_hot_industries)
+        control_layout.addWidget(hot_industry_btn)
 
         control_layout.addStretch()
         layout.addLayout(control_layout)
@@ -205,7 +257,7 @@ class StockAnalyzerApp(QMainWindow):
             # 显示前10只股票
             self.display_analysis(sorted_recommendations[:10])
             
-            # 将强烈推荐的股票添加到智能推荐系统
+                        # 将强烈推荐的股票添加到智能推荐系统
             if HAS_SMART_RECOMMENDATION:
                 try:
                     # 获取智能推荐系统实例
@@ -255,10 +307,9 @@ class StockAnalyzerApp(QMainWindow):
                     
                     if added_to_smart > 0:
                         self.result_text.append(f'\n已将 {added_to_smart} 只强烈推荐股票添加到智能推荐系统')
-                
                 except Exception as e:
                     self.result_text.append(f'\n添加股票到智能推荐系统时出错: {str(e)}')
-            
+        
         except Exception as e:
             QMessageBox.warning(self, '错误', f'分析过程中出错：{str(e)}')
     
@@ -539,56 +590,6 @@ class StockAnalyzerApp(QMainWindow):
             self.result_text.clear()
             self.result_text.append(f'加载失败：{str(e)}')
     
-    def analyze_sectors(self):
-        """分析热门行业"""
-        try:
-            # 使用集成器获取行业数据
-            from integrate_sector_analyzer import SectorAnalyzerIntegrator
-            integrator = SectorAnalyzerIntegrator()
-            
-            # 清空之前的结果
-            self.result_text.clear()
-            self.result_text.append('正在分析行业数据...')
-            QApplication.processEvents()
-            
-            # 获取当前热门行业
-            current_result = integrator.get_hot_sectors()
-            if current_result['status'] != 'success':
-                raise Exception(current_result.get('message', '获取热门行业失败'))
-                
-            # 获取统一分析结果
-            unified_result = integrator.get_unified_analysis()
-            
-            # 显示结果
-            self.result_text.clear()
-            self.result_text.append('==== 热门行业分析 ====')
-            self.result_text.append(f'[更新时间] {current_result["data"]["update_time"]}')
-            self.result_text.append('')
-            
-            # 显示热门行业列表
-            self.result_text.append('== 当前热门行业 ==')
-            for i, sector in enumerate(current_result['data']['hot_sectors'][:10], 1):
-                hot_level = sector.get('hot_level', '')
-                hot_score = sector.get('hot_score', 0)
-                self.result_text.append(f'{i}. {sector["name"]} - 热度: {hot_score:.2f} ({hot_level})')
-            
-            # 如果有技术分析数据，显示第一个行业的分析
-            if 'technical_analysis' in unified_result['data']:
-                tech = unified_result['data']['technical_analysis']
-                self.result_text.append('')
-                self.result_text.append(f'== {tech["sector"]}行业技术分析 ==')
-                self.result_text.append(f'趋势: {tech["prediction"]["trend"]}')
-                self.result_text.append(f'看多指数: {tech["prediction"]["bull_score"]}')
-                self.result_text.append(f'分析: {tech["prediction"]["analysis"]}')
-                
-            self.logger.info("行业分析完成")
-            
-        except Exception as e:
-            self.result_text.clear()
-            self.result_text.append(f'分析行业数据失败: {str(e)}')
-            self.logger.error(f"分析行业数据失败: {str(e)}")
-            QMessageBox.warning(self, '错误', f'分析行业数据失败: {str(e)}')
-    
     def display_analysis(self, recommendations):
         self.result_text.clear()
         self.result_text.append('=== 市场分析报告 ===\n')
@@ -695,10 +696,356 @@ class StockAnalyzerApp(QMainWindow):
         except Exception as e:
             return f"生成分析报告时出错：{str(e)}"
 
-# 添加主入口代码
+    def analyze_hot_industries(self):
+        """热门行业分析和预测功能"""
+        try:
+            self.result_text.clear()
+            self.result_text.append("正在分析热门行业数据，请稍候...")
+            QApplication.processEvents()  # 更新UI
+            
+            # 初始化行业分析器 - 使用优化版行业分析器
+            try:
+                # 优先使用优化版行业分析器
+                sector_analyzer = OptimizedSectorAnalyzer(top_n=15, provider_type='akshare')
+                self.logger.info("使用优化版行业分析器(AKShare)")
+            except Exception as e:
+                # 如果优化版分析器初始化失败，直接显示错误
+                self.logger.error(f"行业分析器初始化失败: {str(e)}")
+                self.show_error_message('初始化失败', f"行业分析器初始化失败: {str(e)}")
+                return
+            
+            # 获取热门行业分析结果
+            self.result_text.append("正在获取行业列表及计算热度...")
+            QApplication.processEvents()  # 更新UI
+            result = sector_analyzer.analyze_hot_sectors()
+            
+            # 处理结果
+            if 'error' in result:
+                self.show_error_message('分析失败', f"热门行业分析失败: {result['error']}")
+                return
+                
+            # 获取热门行业列表
+            hot_sectors = result['data']['sectors']
+            
+            # 获取市场信息
+            market_info = result['data'].get('market_info', {
+                'market_sentiment': 0,
+                'north_flow': 0,
+                'volatility': 0,
+                'shanghai_change_pct': 0,
+                'shenzhen_change_pct': 0,
+                'market_avg_change': 0
+            })
+            
+            # 生成热门行业分析报告
+            self.result_text.append("\n===== 热门行业分析报告 =====")
+            self.result_text.append(f"分析时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            self.result_text.append(f"市场情绪指数: {market_info.get('market_sentiment', 0):.2f}")
+            self.result_text.append(f"北向资金流入(亿元): {market_info.get('north_flow', 0):.2f}")
+            self.result_text.append(f"市场波动率: {market_info.get('volatility', 0):.2f}%")
+            
+            # 显示热门行业排名
+            self.result_text.append("\n【热门行业排名】")
+            for i, sector in enumerate(hot_sectors[:10]):  # 显示前10个行业
+                # 格式化输出，确保所有必要字段存在
+                score = sector.get('score', 0)
+                change_1d = sector.get('change_rate_1d', 0)
+                
+                self.result_text.append(f"{i+1}. {sector['name']} ({sector['code']}) - "
+                                      f"评分: {score:.2f} - 涨跌幅: {change_1d:.2f}%")
+                
+                # 显示更多详细信息
+                self.result_text.append(f"   5日涨幅: {sector.get('change_rate_5d', 0):.2f}% | "
+                                      f"20日涨幅: {sector.get('change_rate_20d', 0):.2f}% | "
+                                      f"趋势强度: {sector.get('trend_strength', 0):.2f}")
+            
+            # 对比行业与大盘趋势
+            self.result_text.append("\n【行业与大盘对比】")
+            QApplication.processEvents()  # 更新UI
+            
+            try:
+                # 获取大盘涨跌
+                market_trend = {
+                    'shanghai_pct': market_info.get('shanghai_change_pct', 0),
+                    'shenzhen_pct': market_info.get('shenzhen_change_pct', 0)
+                }
+                
+                # 获取热门行业中跑赢大盘的比例
+                outperform_sectors = [s for s in hot_sectors[:15] if s.get('change_rate_1d', 0) > market_info.get('market_avg_change', 0)]
+                outperform_pct = len(outperform_sectors) / min(15, len(hot_sectors)) * 100
+                
+                self.result_text.append(f"大盘表现: 沪指涨跌 {market_trend['shanghai_pct']:.2f}%, 深指涨跌 {market_trend['shenzhen_pct']:.2f}%")
+                self.result_text.append(f"行业超越大盘比例: {outperform_pct:.1f}%")
+                
+                if outperform_pct > 70:
+                    self.result_text.append("市场特征: 行业普遍强于大盘，呈现普涨格局")
+                elif outperform_pct < 30:
+                    self.result_text.append("市场特征: 行业普遍弱于大盘，呈现普跌格局")
+                else:
+                    self.result_text.append("市场特征: 行业表现分化，结构性行情明显")
+            except Exception as e:
+                self.logger.warning(f"获取行业趋势对比数据失败: {str(e)}")
+            
+            # 获取行业预测结果
+            self.result_text.append("\n正在预测未来行业走势...")
+            QApplication.processEvents()  # 更新UI
+            
+            try:
+                prediction_result = sector_analyzer.predict_hot_sectors()
+                
+                if 'error' in prediction_result:
+                    self.result_text.append(f"\n预测分析失败: {prediction_result['error']}")
+                else:
+                    # 获取预测行业列表
+                    predicted_sectors = prediction_result['data']['predicted_sectors']
+                    
+                    # 显示预测结果
+                    self.result_text.append("\n【行业走势预测】")
+                    self.result_text.append(f"预测周期: {prediction_result['data'].get('prediction_period', '5天')}")
+                    
+                    for i, pred in enumerate(predicted_sectors[:5]):  # 显示前5个预测
+                        self.result_text.append(f"{i+1}. {pred['name']} - 预测评分: {pred.get('score', 0):.2f} - "
+                                             f"预测涨跌: {pred.get('predicted_5d_change', 0):.2f}% - "
+                                             f"置信度: {pred.get('prediction_confidence', 0):.2f}%")
+                        if 'reason' in pred:
+                            self.result_text.append(f"   理由: {pred['reason']}")
+                    
+                    # 行业轮动分析
+                    self.result_text.append("\n【行业轮动分析】")
+                    rotation = self._create_simple_rotation_analysis(hot_sectors, predicted_sectors)
+                    
+                    if rotation:
+                        self.result_text.append(f"当前轮动阶段: {rotation.get('current_stage', '未知')}")
+                        self.result_text.append(f"轮动方向: {rotation.get('rotation_direction', '未知')}")
+                        
+                        if 'next_sectors' in rotation:
+                            self.result_text.append("可能的下一轮行业:")
+                            for sector in rotation['next_sectors'][:3]:
+                                self.result_text.append(f"- {sector}")
+                    
+                    # 行业景气度分析
+                    self.result_text.append("\n【行业景气度评估】")
+                    
+                    # 计算行业景气度
+                    prosperity_data = self._calculate_sector_prosperity(hot_sectors[:15], predicted_sectors[:10])
+                    
+                    # 显示景气度结果
+                    prosperity_data.sort(key=lambda x: x['prosperity_score'], reverse=True)
+                    for i, item in enumerate(prosperity_data[:5]):
+                        self.result_text.append(f"{i+1}. {item['name']} - 景气度: {item['prosperity_score']:.1f}")
+                        self.result_text.append(f"   当前热度: {item['current_heat']:.1f} | 预期变化: {item['change_trend']}")
+            except Exception as e:
+                self.logger.error(f"预测热门行业时出错: {str(e)}")
+                self.result_text.append(f"\n预测分析失败: {str(e)}")
+            
+            # 生成投资建议
+            self.result_text.append("\n【投资建议】")
+            self.result_text.append("根据行业分析和预测，建议关注以下方向:")
+            
+            # 提取短期和中期机会
+            short_term = [s for s in hot_sectors[:5] if s.get('score', 0) > 50]
+            mid_term = [p for p in predicted_sectors[:5] if p.get('score', 0) > 50]
+            
+            if short_term:
+                self.result_text.append("短期关注:")
+                for s in short_term:
+                    self.result_text.append(f"- {s['name']}: {s.get('analysis_reason', '热度高')}")
+            
+            if mid_term:
+                self.result_text.append("中期布局:")
+                for m in mid_term:
+                    self.result_text.append(f"- {m['name']}: {m.get('reason', '预期向好')}")
+            
+            # 强调风险提示
+            self.result_text.append("\n⚠️ 风险提示: 行业分析仅供参考，投资决策需结合多方面因素，注意控制风险。")
+            
+        except Exception as e:
+            import traceback
+            self.logger.error(f"热门行业分析出错: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            self.show_error_message('分析错误', f"热门行业分析过程中出错: {str(e)}")
+            self.result_text.append(f"分析发生错误: {str(e)}")
+    
+    def _calculate_sector_prosperity(self, hot_sectors, predictions):
+        """计算行业景气度
+        
+        Args:
+            hot_sectors: 热门行业列表
+            predictions: 预测行业列表
+            
+        Returns:
+            行业景气度数据列表
+        """
+        # 创建行业名称到数据的映射
+        sector_map = {s['name']: s for s in hot_sectors}
+        prediction_map = {p['name']: p for p in predictions}
+        
+        prosperity_data = []
+        
+        # 对每个热门行业计算景气度
+        for sector in hot_sectors:
+            name = sector['name']
+            
+            # 基本热度 (0-100)
+            # 兼容新旧字段名: 新版用'score'，旧版用'hot_score'
+            if 'score' in sector:
+                current_heat = min(100, max(0, sector['score']))
+            elif 'hot_score' in sector:
+                current_heat = min(100, max(0, sector['hot_score']))
+            else:
+                # 如果两个字段都不存在，使用默认值
+                current_heat = 50
+            
+            # 预期趋势
+            prediction = prediction_map.get(name)
+            if prediction:
+                # 兼容新旧字段名
+                if 'predicted_5d_change' in prediction:
+                    predicted_change = prediction.get('predicted_5d_change', 0)
+                else:
+                    predicted_change = prediction.get('predicted_change_pct', 0)
+                    
+                # 兼容不同的分数和置信度字段
+                if 'score' in prediction:
+                    predicted_score = prediction.get('score', 50)
+                else:
+                    predicted_score = prediction.get('prediction_score', 50)
+                    
+                if 'prediction_confidence' in prediction:
+                    confidence = prediction.get('prediction_confidence', 0.5) / 100
+                else:
+                    confidence = prediction.get('confidence', 0.5)
+                
+                # 计算趋势分数 (-50 到 50)
+                trend_score = predicted_change * confidence * 0.25
+                
+                # 确定趋势方向
+                if trend_score > 10:
+                    change_trend = "持续向好 ↑↑"
+                elif trend_score > 3:
+                    change_trend = "小幅向好 ↑"
+                elif trend_score < -10:
+                    change_trend = "持续下行 ↓↓"
+                elif trend_score < -3:
+                    change_trend = "小幅下行 ↓"
+                else:
+                    change_trend = "相对稳定 →"
+            else:
+                # 如果没有预测数据，默认为中性
+                trend_score = 0
+                change_trend = "数据不足 -"
+            
+            # 最终景气度分数 (0-100)
+            prosperity_score = current_heat * 0.7 + (50 + trend_score) * 0.3
+            
+            prosperity_data.append({
+                'name': name,
+                'current_heat': current_heat,
+                'trend_score': trend_score,
+                'change_trend': change_trend,
+                'prosperity_score': prosperity_score
+            })
+        
+        return prosperity_data
+
+    def _create_simple_rotation_analysis(self, hot_sectors, predicted_sectors):
+        """创建一个简单的轮动分析
+        
+        Args:
+            hot_sectors: 热门行业列表
+            predicted_sectors: 预测行业列表
+            
+        Returns:
+            轮动分析数据
+        """
+        try:
+            # 准备数据
+            if not hot_sectors or not predicted_sectors:
+                return {
+                    'current_stage': '未知',
+                    'rotation_direction': '未知',
+                    'next_sectors': ['无行业数据']
+                }
+            
+            # 获取当前最热门行业 (TOP3)
+            current_hot = []
+            for sector in hot_sectors[:min(3, len(hot_sectors))]:
+                current_hot.append(sector['name'])
+            
+            # 获取未来预测最热门行业 (TOP3)
+            future_hot = []
+            for sector in predicted_sectors[:min(3, len(predicted_sectors))]:
+                future_hot.append(sector['name'])
+            
+            # 找出只在未来预测中出现的行业
+            next_sectors = [name for name in future_hot if name not in current_hot]
+            
+            # 如果没有发现新兴行业，使用预测评分最高的行业
+            if not next_sectors and predicted_sectors:
+                next_sectors = [predicted_sectors[0]['name']]
+            
+            # 分析行业轮动方向
+            # 比较当前热门行业和未来预测行业的平均涨幅
+            current_change = 0
+            for sector in hot_sectors[:min(5, len(hot_sectors))]:
+                current_change += sector.get('change_rate_1d', 0)
+            current_change = current_change / min(5, len(hot_sectors)) if hot_sectors else 0
+            
+            future_change = 0
+            for sector in predicted_sectors[:min(5, len(predicted_sectors))]:
+                future_change += sector.get('predicted_5d_change', 0)
+            future_change = future_change / min(5, len(predicted_sectors)) if predicted_sectors else 0
+            
+            # 确定轮动方向
+            if future_change > current_change + 1:  # 有明显提升
+                rotation_direction = "加速向上"
+                current_stage = "上升加速期"
+            elif future_change > current_change:
+                rotation_direction = "向上"
+                current_stage = "上升期"
+            elif future_change < current_change - 1:  # 有明显下降
+                rotation_direction = "加速向下"
+                current_stage = "下降加速期"
+            elif future_change < current_change:
+                rotation_direction = "向下"
+                current_stage = "下降期"
+            else:
+                rotation_direction = "持平"
+                current_stage = "震荡期"
+            
+            # 返回分析结果
+            return {
+                'current_stage': current_stage,
+                'rotation_direction': rotation_direction,
+                'next_sectors': next_sectors
+            }
+        except Exception as e:
+            self.logger.error(f"创建轮动分析时出错: {str(e)}")
+            return {
+                'current_stage': '未知',
+                'rotation_direction': '未知',
+                'next_sectors': ['分析出错']
+            }
+
+def main():
+    """主函数"""
+    try:
+        # 保存进程ID
+        save_pid()
+
+        # 初始化QApplication
+        app = QApplication(sys.argv)
+        
+        # 创建并显示股票分析应用
+        analyzer_app = StockAnalyzerApp()
+        analyzer_app.show()
+        
+        # 运行应用
+        return app.exec_()
+    except Exception as e:
+        print(f"启动应用出错: {str(e)}")
+        logging.error(f"启动应用出错: {str(e)}", exc_info=True)
+        return 1
+
 if __name__ == "__main__":
-    import sys
-    app = QApplication(sys.argv)
-    window = StockAnalyzerApp()
-    window.show()
-    sys.exit(app.exec_())
+    sys.exit(main())

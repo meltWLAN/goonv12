@@ -165,15 +165,15 @@ class EnhancedBacktester:
                 
         return data
         
-def backtest_kdj_strategy(self, data: pd.DataFrame, symbol: str) -> BacktestResult:
+    def backtest_kdj_strategy(self, data: pd.DataFrame, symbol: str) -> BacktestResult:
         """KDJ金叉策略回测，增强版本包含动态止损和资金管理
         
         Args:
-            data: 股票数据
+            data: 股票历史数据，包含OHLCV
             symbol: 股票代码
             
         Returns:
-            回测结果，包含详细的交易记录和风险指标
+            回测结果
         """
         # 初始化风险控制参数
         self._init_risk_params(data)

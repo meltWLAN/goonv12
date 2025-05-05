@@ -25,13 +25,45 @@ class ChinaStockProvider:
     CACHE_EXPIRY = 1800  # 缓存有效期(秒)
     RETRY_INTERVALS = [0.5, 1, 2]  # 重试间隔
     
-    def __init__(self, tushare_token: str = None):
-        """初始化数据提供者
+    def __init__(self, api_token=None, current_source='tushare'):
+        """初始化中国股票数据提供者
         
         Args:
-            tushare_token: Tushare API令牌
+            api_token: API令牌 (如Tushare的token)
+            current_source: 默认数据源 ('tushare' 或 'akshare')
         """
-        self.logger = logging.getLogger('ChinaStockProvider')
+        self.tushare_token = api_token
+        self.current_source = current_source
+        self.tushare_pro = None
+        self.max_retry = 3
+        self.data_cache = {}  # 添加数据缓存属性
+        
+        # 初始化日志
+        self.logger = logging.getLogger('stock_data_provider')
+        if not self.logger.handlers:
+            # 创建文件处理器
+            log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            file_handler = logging.FileHandler('data_provider.log')
+            file_handler.setFormatter(log_formatter)
+            self.logger.addHandler(file_handler)
+            
+            # 创建控制台处理器
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(log_formatter)
+            self.logger.addHandler(console_handler)
+            
+            # 设置日志级别
+            self.logger.setLevel(logging.INFO)
+        
+        # 如果提供了Tushare token，则初始化Tushare API
+        if api_token and current_source == 'tushare':
+            try:
+                ts.set_token(api_token)
+                self.tushare_pro = ts.pro_api()
+                self.logger.info("成功初始化Tushare API")
+            except Exception as e:
+                self.logger.error(f"初始化Tushare API失败: {str(e)}")
+        
         self.memory_cache = {}  # 内存缓存
         
         # 设置数据源
@@ -40,18 +72,6 @@ class ChinaStockProvider:
         # API调用间隔
         self.api_cooldown = 0.5
         self.last_api_call = 0
-        
-        # 初始化Tushare
-        self.tushare_token = tushare_token or '0e65a5c636112dc9d9af5ccc93ef06c55987805b9467db0866185a10'
-        self.tushare_pro = None
-        try:
-            ts.set_token(self.tushare_token)
-            self.tushare_pro = ts.pro_api()
-            self.logger.info("Tushare API初始化成功")
-            self.current_source = 'tushare'  # 默认使用tushare
-        except Exception as e:
-            self.logger.error(f"Tushare API初始化失败: {str(e)}")
-            self.current_source = 'akshare'  # 如果Tushare失败，使用akshare作为备选
         
         self._init_column_mappings()
         self._init_api_handlers()
@@ -135,51 +155,114 @@ class ChinaStockProvider:
         else:
             return ['akshare']
     
-    def get_data(self, data_type: str, symbol: str, **kwargs) -> pd.DataFrame:
-        """统一数据获取入口
+    def get_data(self, data_type='stock', **kwargs):
+        """通用数据获取接口，支持不同数据类型
         
         Args:
-            data_type: 数据类型(stock/sector/index)
-            symbol: 标的代码
-            kwargs: 各类型特有参数
-                - start_date: 开始日期(YYYYMMDD)
-                - end_date: 结束日期(YYYYMMDD)
-                - data_source: 指定数据源('akshare'/'tushare')
+            data_type: 数据类型，如 'stock'（股票行情数据）、'info'（股票基本信息）等
+            kwargs: 其他参数，不同数据类型需要的参数不同
         
         Returns:
-            标准化格式的DataFrame
+            DataFrame 包含请求的数据
         """
-        # 可以临时指定数据源
-        temp_source = kwargs.pop('data_source', None)
-        if temp_source:
-            old_source = self.current_source
-            if temp_source in self.get_available_sources():
-                self.current_source = temp_source
+        if data_type == 'stock':
+            # 获取股票行情数据
+            symbol = kwargs.get('symbol')
+            start_date = kwargs.get('start_date')
+            end_date = kwargs.get('end_date')
+            limit = kwargs.get('limit')
+            return self.get_stock_data(symbol, start_date, end_date, limit)
+        elif data_type == 'info':
+            # 获取股票基本信息
+            symbol = kwargs.get('symbol')
+            return self.get_stock_info(symbol)
+        else:
+            self.logger.error(f"不支持的数据类型: {data_type}")
+            return pd.DataFrame()
             
-        cache_key = f"{self.current_source}_{data_type}_{symbol}_{str(kwargs)}"
+    def get_stock_info(self, symbol=None):
+        """获取股票基本信息
         
-        # 检查内存缓存
-        if cached := self._get_from_cache(cache_key):
-            return cached
-        
+        Args:
+            symbol: 股票代码，如 '000001.SZ'
+            
+        Returns:
+            DataFrame 包含股票基本信息
+        """
         try:
-            # 执行API调用
-            df = self._call_with_retry(
-                func=self.api_handlers[data_type],
-                symbol=symbol,
-                **kwargs
-            )
-            
-            # 标准化处理
-            df = self._standardize_data(df, data_type)
-            
-            # 更新缓存
-            self._update_cache(cache_key, df)
-            return df
-        finally:
-            # 恢复原数据源
-            if temp_source:
-                self.current_source = old_source
+            # 标准化股票代码
+            if symbol:
+                symbol = self._standardize_stock_code(symbol)
+                
+            # 尝试使用tushare获取
+            if self.tushare_pro and symbol:
+                try:
+                    # 提取市场和代码
+                    code, market = symbol.split('.')
+                    info = self.tushare_pro.stock_basic(ts_code=symbol, fields='ts_code,symbol,name,area,industry,list_date')
+                    if not isinstance(info, pd.DataFrame) or info.empty:
+                        self.logger.warning(f"Tushare未返回{symbol}的股票信息")
+                    else:
+                        return info
+                except Exception as e:
+                    self.logger.warning(f"使用Tushare获取股票信息失败: {str(e)}")
+                    
+            # 如果tushare失败，尝试使用akshare
+            try:
+                # 初始化结果DataFrame
+                if symbol:
+                    # 获取单只股票信息
+                    try:
+                        code, market = symbol.split('.')
+                        if market == 'SH':
+                            market_code = 'sh'
+                        elif market == 'SZ':
+                            market_code = 'sz'
+                        elif market == 'BJ':
+                            market_code = 'bj'
+                        else:
+                            self.logger.error(f"不支持的市场代码: {market}")
+                            return pd.DataFrame({'ts_code': [symbol], 'name': [symbol]})
+                            
+                        full_code = f"{market_code}{code}"
+                        info = ak.stock_individual_info_em(symbol=full_code)
+                        if not isinstance(info, pd.DataFrame) or info.empty:
+                            return pd.DataFrame({'ts_code': [symbol], 'name': [symbol]})
+                        
+                        # 重命名列以兼容代码
+                        if '股票名称' in info.columns:
+                            info['name'] = info['股票名称']
+                        if '行业' in info.columns:
+                            info['industry'] = info['行业']
+                            
+                        # 添加ts_code列以兼容代码
+                        info['ts_code'] = symbol
+                        
+                        return info
+                    except Exception as e:
+                        self.logger.error(f"使用Akshare获取股票信息失败: {str(e)}")
+                        return pd.DataFrame({'ts_code': [symbol], 'name': [symbol]})
+                else:
+                    # 获取所有A股列表
+                    try:
+                        info = ak.stock_zh_a_spot_em()
+                        return info
+                    except Exception as e:
+                        self.logger.error(f"使用Akshare获取A股列表失败: {str(e)}")
+                        return pd.DataFrame()
+            except Exception as e:
+                self.logger.error(f"获取股票信息过程中发生错误: {str(e)}")
+                
+            # 如果所有方法都失败，返回一个包含股票代码的最小DataFrame
+            if symbol:
+                return pd.DataFrame({'ts_code': [symbol], 'name': [symbol]})
+            return pd.DataFrame()
+                
+        except Exception as e:
+            self.logger.error(f"获取股票信息时出错: {str(e)}")
+            if symbol:
+                return pd.DataFrame({'ts_code': [symbol], 'name': [symbol]})
+            return pd.DataFrame()
         
     def _call_with_retry(self, func, **params):
         """带重试机制的API调用"""
@@ -340,79 +423,94 @@ class ChinaStockProvider:
         # 参数验证
         if not symbol:
             self.logger.error("股票代码不能为空")
-            return pd.DataFrame()
+            return self._prepare_error_response()
             
         # 标准化股票代码
         orig_symbol = symbol
         symbol = self._standardize_stock_code(symbol)
         if not symbol:
             self.logger.error(f"无法标准化股票代码: {orig_symbol}")
-            return pd.DataFrame()
+            return self._prepare_error_response(orig_symbol)
             
         # 日期处理
         start_date = kwargs.get('start_date', 
                             (datetime.now() - timedelta(days=120)).strftime('%Y%m%d'))
         end_date = kwargs.get('end_date', datetime.now().strftime('%Y%m%d'))
+        limit = kwargs.get('limit')
         
-        # 日期格式验证
-        try:
-            datetime.strptime(start_date, '%Y%m%d')
-            datetime.strptime(end_date, '%Y%m%d')
-        except ValueError:
-            self.logger.error(f"日期格式无效: start_date={start_date}, end_date={end_date}")
-            return pd.DataFrame()
-            
-        # 根据当前数据源选择不同实现
-        df = pd.DataFrame()
-        errors = []
+        self.logger.info(f"请求股票数据: {symbol}, {start_date} - {end_date}")
         
-        if self.current_source == 'tushare':
-            # 直接使用Tushare
+        # 尝试从缓存获取
+        cache_key = f"{symbol}_{start_date}_{end_date}"
+        if cache_key in self.data_cache:
+            df = self.data_cache[cache_key]
+            if isinstance(df, pd.DataFrame) and not df.empty:
+                return df
+        
+        # 尝试不同的数据源
+        strategies = [
+            ('tushare', self._get_stock_data_tushare),
+            ('akshare', self._get_stock_data_akshare)
+        ]
+        
+        df = pd.DataFrame()  # 初始化为空DataFrame
+        
+        for name, func in strategies:
             try:
-                df = self._get_stock_data_tushare(symbol, start_date, end_date)
-            except Exception as e:
-                errors.append(f"Tushare错误: {str(e)}")
-                self.logger.error(f"Tushare获取数据异常: {str(e)}")
-            
-            # 如果Tushare获取失败，尝试使用Akshare
-            if df.empty:
-                self.logger.warning(f"Tushare未返回数据: {symbol}，正在尝试使用Akshare")
-                try:
-                    df = self._get_stock_data_akshare(symbol, start_date, end_date)
-                except Exception as e:
-                    errors.append(f"Akshare错误: {str(e)}")
-                    self.logger.error(f"Akshare获取数据异常: {str(e)}")
-        else:
-            # 先尝试使用Akshare
-            try:
-                df = self._get_stock_data_akshare(symbol, start_date, end_date)
-            except Exception as e:
-                errors.append(f"Akshare错误: {str(e)}")
-                self.logger.error(f"Akshare获取数据异常: {str(e)}")
+                self.logger.info(f"尝试使用{name}获取数据...")
+                df = func(symbol, start_date, end_date)
                 
-            # 如果Akshare获取失败且Tushare可用，尝试使用Tushare
-            if df.empty and self.tushare_pro:
-                self.logger.warning(f"Akshare未返回数据: {symbol}，正在尝试使用Tushare")
-                try:
-                    df = self._get_stock_data_tushare(symbol, start_date, end_date)
-                except Exception as e:
-                    errors.append(f"Tushare错误: {str(e)}")
-                    self.logger.error(f"Tushare获取数据异常: {str(e)}")
-        
-        # 如果仍然为空，记录详细错误
-        if df.empty:
-            error_msg = "、".join(errors) if errors else "未知原因"
-            self.logger.error(f"所有数据源都未能获取到{symbol}的交易数据: {error_msg}")
-            
-            # 创建一个包含基本结构的空DataFrame
-            empty_df = pd.DataFrame(columns=['ts_code', 'date', 'open', 'high', 'low', 'close', 'volume', 'amount'])
-            # 添加示例行，避免后续计算出错
-            if kwargs.get('add_example_row', False):
-                today = datetime.now().strftime('%Y%m%d')
-                empty_df.loc[0] = [symbol, today, 0.0, 0.0, 0.0, 0.0, 0, 0.0]
-            return empty_df
-        
+                # 验证返回结果
+                if self._validate_response(df):
+                    self.logger.info(f"成功使用{name}获取数据: {len(df)}行")
+                    # 缓存结果
+                    self.data_cache[cache_key] = df
+                    return df
+        else:
+                    self.logger.warning(f"{name}返回的数据不完整或为空: {len(df) if isinstance(df, pd.DataFrame) else 'not a dataframe'}")
+            except Exception as e:
+                self.logger.error(f"使用{name}获取数据失败: {str(e)}")
+                
+        # 所有策略都失败，返回一个最小的有效结果
+        self.logger.error(f"所有数据源都失败，返回默认数据")
+        return self._prepare_error_response(symbol)
+    
+    def _prepare_error_response(self, symbol=None, error_msg="未知错误"):
+        """准备错误响应，返回一个标准的错误DataFrame"""
+        self.logger.error(error_msg)
+        # 创建一个空的结果DataFrame
+        df = pd.DataFrame({
+            'trade_date': [datetime.now().strftime('%Y%m%d')],
+            'open': [0.0],
+            'high': [0.0],
+            'low': [0.0],
+            'close': [0.0],
+            'volume': [0]
+        })
+        if symbol:
+            df['ts_code'] = symbol
         return df
+
+    def _validate_response(self, df, min_rows=5):
+        """验证响应是否有效
+        
+        Args:
+            df: DataFrame响应
+            min_rows: 最小行数要求
+            
+        Returns:
+            如果有效返回True，否则False
+        """
+        if not isinstance(df, pd.DataFrame):
+            return False
+            
+        if df.empty:
+            return False
+            
+        if len(df) < min_rows:
+            return False
+            
+        return True
     
     def _get_stock_data_tushare(self, symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
         """使用Tushare获取股票历史数据"""
@@ -434,7 +532,7 @@ class ChinaStockProvider:
                 df = self.tushare_pro.daily(ts_code=symbol, start_date=start_date, end_date=end_date)
                 
                 # 如果日期有数据，使用它
-                if not df.empty:
+                if isinstance(df, pd.DataFrame) and not df.empty:
                     self.logger.info(f"成功通过Tushare daily接口获取{symbol}的数据: {len(df)}条")
                     
                     # 因为Tushare返回的数据是倒序的（最新的在前），我们保持一致
@@ -446,7 +544,7 @@ class ChinaStockProvider:
             try:
                 df = ts.pro_bar(ts_code=symbol, adj='qfq', start_date=start_date, end_date=end_date)
                 
-                if df is not None and not df.empty:
+                if df is not None and isinstance(df, pd.DataFrame) and not df.empty:
                     self.logger.info(f"成功通过Tushare pro_bar接口获取{symbol}的数据: {len(df)}条")
                     return df
             except Exception as e:
@@ -503,7 +601,7 @@ class ChinaStockProvider:
                                      start_date=start_date_fmt, end_date=end_date_fmt,
                                      adjust="qfq")
             
-            if df.empty:
+            if not isinstance(df, pd.DataFrame) or df.empty:
                 self.logger.warning(f"Akshare未返回数据: {symbol}")
                 return pd.DataFrame()
                 
@@ -686,773 +784,6 @@ class ChinaStockProvider:
         except Exception as e:
             self.logger.warning(f"市场情绪计算失败: {str(e)}")
             return 50.0  # 默认中性
-
-    def get_stock_info(self, symbol: str = None, market: str = None) -> pd.DataFrame:
-        """获取股票基本信息
-        
-        Args:
-            symbol: 股票代码
-            market: 市场 ('SH', 'SZ', 'BJ')
-            
-        Returns:
-            DataFrame 包含股票信息
-        """
-        if self.current_source == 'akshare':
-            try:
-                if market:
-                    if market == 'SH':
-                        df = ak.stock_info_sh_name_code()
-                    elif market == 'SZ':
-                        df = ak.stock_info_sz_name_code()
-                    else:
-                        self.logger.error(f"Akshare不支持的市场: {market}")
-                        return pd.DataFrame()
-                else:
-                    # 合并多个市场的股票信息
-                    df_sh = ak.stock_info_sh_name_code()
-                    df_sz = ak.stock_info_sz_name_code()
-                    df = pd.concat([df_sh, df_sz], ignore_index=True)
-                
-                # 筛选特定股票
-                if symbol:
-                    if '.' in symbol:
-                        code = symbol.split('.')[0]
-                    else:
-                        code = symbol
-                    df = df[df['code'].str.contains(code)]
-                
-                return df
-                
-            except Exception as e:
-                self.logger.error(f"使用Akshare获取股票信息失败: {str(e)}")
-                return pd.DataFrame()
-                
-        elif self.current_source == 'tushare':
-            try:
-                if market and not symbol:
-                    df = self.tushare_pro.stock_basic(exchange=market.lower(), 
-                                                      list_status='L',
-                                                      fields='ts_code,symbol,name,area,industry,market,list_date')
-                else:
-                    df = self.tushare_pro.stock_basic(exchange='', 
-                                                      list_status='L',
-                                                      fields='ts_code,symbol,name,area,industry,market,list_date')
-                    
-                # 筛选特定股票
-                if symbol:
-                    if '.' in symbol:
-                        df = df[df['ts_code'] == symbol]
-                    else:
-                        df = df[df['symbol'] == symbol]
-                
-                return df
-                
-            except Exception as e:
-                self.logger.error(f"使用Tushare获取股票信息失败: {str(e)}")
-                return pd.DataFrame()
-        
-        return pd.DataFrame()
-
-    def get_realtime_daily(self, ts_code: str = None) -> pd.DataFrame:
-        """获取实时日K线行情数据
-        
-        使用tushare的rt_k接口获取当日实时行情
-        
-        Args:
-            ts_code: 股票代码，支持通配符，如'6*.SH'，'301*.SZ'，多个代码使用逗号分隔
-                     注意代码必须带.SH/.SZ/.BJ后缀
-                     
-        Returns:
-            DataFrame 包含实时日K线数据
-        """
-        if not self.tushare_pro:
-            self.logger.error("Tushare未初始化，无法获取实时行情")
-            return pd.DataFrame()
-            
-        try:
-            self.logger.info(f"获取实时日K线数据: {ts_code}")
-            
-            # 调用tushare rt_k接口
-            df = self.tushare_pro.rt_k(ts_code=ts_code)
-            
-            if df.empty:
-                self.logger.warning(f"未获取到实时行情数据: {ts_code}")
-                return pd.DataFrame()
-                
-            # 标准化列名，与其他接口统一
-            rename_map = {
-                'ts_code': 'ts_code',
-                'name': 'name',
-                'pre_close': 'pre_close',
-                'high': 'high',
-                'open': 'open',
-                'low': 'low',
-                'close': 'close',
-                'vol': 'volume',
-                'amount': 'amount',
-                'num': 'trade_count'  # 成交笔数
-            }
-            
-            df = df.rename(columns=rename_map)
-            
-            # 确保数值列为float类型
-            numeric_cols = ['pre_close', 'high', 'open', 'low', 'close', 'volume', 'amount']
-            for col in numeric_cols:
-                if col in df.columns:
-                    df[col] = pd.to_numeric(df[col], errors='coerce')
-            
-            return df
-            
-        except Exception as e:
-            self.logger.error(f"获取实时日K线数据失败: {str(e)}")
-            return pd.DataFrame()
-            
-    def get_realtime_minute(self, ts_code: str, freq: str = '1MIN') -> pd.DataFrame:
-        """获取实时分钟K线行情数据
-        
-        使用tushare的rt_min接口获取当日实时分钟行情
-        
-        Args:
-            ts_code: 股票代码，如'600000.SH'，多个代码使用逗号分隔
-            freq: 频率，支持 1MIN/5MIN/15MIN/30MIN/60MIN
-                     
-        Returns:
-            DataFrame 包含实时分钟K线数据
-        """
-        if not self.tushare_pro:
-            self.logger.error("Tushare未初始化，无法获取实时分钟行情")
-            return pd.DataFrame()
-            
-        try:
-            self.logger.info(f"获取实时分钟K线数据: {ts_code}, 频率: {freq}")
-            
-            # 调用tushare rt_min接口
-            df = self.tushare_pro.rt_min(ts_code=ts_code, freq=freq)
-            
-            if df.empty:
-                self.logger.warning(f"未获取到实时分钟行情数据: {ts_code}")
-                return pd.DataFrame()
-                
-            # 标准化列名，与其他接口统一
-            rename_map = {
-                'ts_code': 'ts_code',
-                'time': 'trade_time',
-                'open': 'open',
-                'close': 'close',
-                'high': 'high',
-                'low': 'low',
-                'vol': 'volume',
-                'amount': 'amount'
-            }
-            
-            df = df.rename(columns=rename_map)
-            
-            # 确保数值列为float类型
-            numeric_cols = ['open', 'high', 'low', 'close', 'volume', 'amount']
-            for col in numeric_cols:
-                if col in df.columns:
-                    df[col] = pd.to_numeric(df[col], errors='coerce')
-            
-            return df
-            
-        except Exception as e:
-            self.logger.error(f"获取实时分钟K线数据失败: {str(e)}")
-            return pd.DataFrame()
-            
-    def get_tick_data(self, ts_code: str) -> pd.DataFrame:
-        """获取股票实时逐笔成交数据
-        
-        使用tushare的realtime_tick接口获取实时逐笔成交
-        
-        Args:
-            ts_code: 股票代码，如'600000.SH'
-                     
-        Returns:
-            DataFrame 包含实时成交数据
-        """
-        if not self.tushare_token:
-            self.logger.error("Tushare token未设置，无法获取实时逐笔成交")
-            return pd.DataFrame()
-            
-        try:
-            import tushare as ts
-            ts.set_token(self.tushare_token)
-            
-            self.logger.info(f"获取实时逐笔成交数据: {ts_code}")
-            
-            # 调用tushare realtime_tick接口
-            df = ts.realtime_tick(ts_code=ts_code)
-            
-            if df is None or df.empty:
-                self.logger.warning(f"未获取到实时逐笔成交数据: {ts_code}")
-                return pd.DataFrame()
-            
-            # 标准化列名
-            if 'TIME' in df.columns:
-                df.rename(columns={
-                    'TIME': 'time',
-                    'PRICE': 'price',
-                    'CHANGE': 'change',
-                    'VOLUME': 'volume',
-                    'AMOUNT': 'amount',
-                    'TYPE': 'type'
-                }, inplace=True)
-            
-            return df
-            
-        except Exception as e:
-            self.logger.error(f"获取实时逐笔成交数据失败: {str(e)}")
-            return pd.DataFrame()
-            
-    def get_realtime_quotes(self, ts_code: str) -> pd.DataFrame:
-        """获取股票实时行情快照
-        
-        使用tushare的realtime_quote接口获取实时行情快照
-        
-        Args:
-            ts_code: 股票代码，如'600000.SH'，支持多个代码，逗号分隔
-                     
-        Returns:
-            DataFrame 包含实时行情快照数据
-        """
-        if not self.tushare_token:
-            self.logger.error("Tushare token未设置，无法获取实时行情快照")
-            return pd.DataFrame()
-            
-        try:
-            import tushare as ts
-            ts.set_token(self.tushare_token)
-            
-            self.logger.info(f"获取实时行情快照: {ts_code}")
-            
-            # 调用tushare realtime_quote接口
-            df = ts.realtime_quote(ts_code=ts_code)
-            
-            if df is None or df.empty:
-                self.logger.warning(f"未获取到实时行情快照: {ts_code}")
-                return pd.DataFrame()
-            
-            return df
-            
-        except Exception as e:
-            self.logger.error(f"获取实时行情快照失败: {str(e)}")
-            return pd.DataFrame()
-
-    # ========== 研究数据API方法 ==========
-    
-    def get_earnings_forecast(self, ts_code: str = '', start_date: str = '', end_date: str = '') -> pd.DataFrame:
-        """获取盈利预测数据 (对应Tushare的report_rc)
-        
-        Args:
-            ts_code: 股票代码
-            start_date: 开始日期 (YYYYMMDD)
-            end_date: 结束日期 (YYYYMMDD)
-            
-        Returns:
-            盈利预测数据
-        """
-        self._ensure_tushare_available()
-        
-        try:
-            if self.tushare_pro is None:
-                self.logger.error("未加载Tushare Pro数据源")
-                return pd.DataFrame()
-                
-            self.logger.info(f"获取盈利预测数据: {ts_code}")
-            
-            # 构建API参数
-            params = {}
-            if ts_code:
-                params['ts_code'] = ts_code
-            if start_date:
-                params['start_date'] = start_date
-            if end_date:
-                params['end_date'] = end_date
-                
-            # 调用API
-            df = self._retry_tushare_api(
-                lambda: self.tushare_pro.report_rc(**params)
-            )
-            
-            if df.empty:
-                self.logger.warning(f"未找到盈利预测数据: {ts_code}")
-                return df
-                
-            # 数据验证
-            self._validate_dataframe(df, ['ts_code', 'report_date'])
-            
-            return df
-            
-        except Exception as e:
-            self.logger.error(f"获取盈利预测数据失败: {str(e)}")
-            return pd.DataFrame()
-    
-    def get_chip_distribution(self, ts_code: str, trade_date: str = '') -> pd.DataFrame:
-        """获取每日筹码分布 (对应Tushare的cyq_chips)
-        
-        Args:
-            ts_code: 股票代码
-            trade_date: 交易日期 (YYYYMMDD)
-            
-        Returns:
-            每日筹码分布数据
-        """
-        self._ensure_tushare_available()
-        
-        try:
-            if self.tushare_pro is None:
-                self.logger.error("未加载Tushare Pro数据源")
-                return pd.DataFrame()
-                
-            self.logger.info(f"获取每日筹码分布: {ts_code}, 日期: {trade_date}")
-            
-            # 如果未提供日期，使用最近交易日
-            if not trade_date:
-                trade_date = self._get_latest_trade_date()
-                
-            # 调用API
-            df = self._retry_tushare_api(
-                lambda: self.tushare_pro.cyq_chips(ts_code=ts_code, trade_date=trade_date)
-            )
-            
-            if df.empty:
-                self.logger.warning(f"未找到筹码分布数据: {ts_code}, 日期: {trade_date}")
-                return df
-                
-            # 数据验证
-            self._validate_dataframe(df, ['price', 'percent'])
-            
-            return df
-            
-        except Exception as e:
-            self.logger.error(f"获取筹码分布数据失败: {str(e)}")
-            return pd.DataFrame()
-    
-    def get_chip_performance(self, ts_code: str, trade_date: str = '') -> pd.DataFrame:
-        """获取每日筹码平均成本和胜率 (对应Tushare的cyq_perf)
-        
-        Args:
-            ts_code: 股票代码
-            trade_date: 交易日期 (YYYYMMDD)
-            
-        Returns:
-            每日筹码平均成本和胜率数据
-        """
-        self._ensure_tushare_available()
-        
-        try:
-            if self.tushare_pro is None:
-                self.logger.error("未加载Tushare Pro数据源")
-                return pd.DataFrame()
-                
-            self.logger.info(f"获取筹码平均成本: {ts_code}, 日期: {trade_date}")
-            
-            # 如果未提供日期，使用最近交易日
-            if not trade_date:
-                trade_date = self._get_latest_trade_date()
-                
-            # 调用API
-            df = self._retry_tushare_api(
-                lambda: self.tushare_pro.cyq_perf(ts_code=ts_code, trade_date=trade_date)
-            )
-            
-            if df.empty:
-                self.logger.warning(f"未找到筹码平均成本数据: {ts_code}, 日期: {trade_date}")
-                return df
-                
-            # 数据验证
-            self._validate_dataframe(df, ['winner_rate', 'weight_avg'])
-            
-            return df
-            
-        except Exception as e:
-            self.logger.error(f"获取筹码平均成本数据失败: {str(e)}")
-            return pd.DataFrame()
-    
-    def get_technical_factors(self, ts_code: str = '', trade_date: str = '') -> pd.DataFrame:
-        """获取股票技术面因子 (对应Tushare的stk_factor)
-        
-        Args:
-            ts_code: 股票代码
-            trade_date: 交易日期 (YYYYMMDD)
-            
-        Returns:
-            技术面因子数据
-        """
-        self._ensure_tushare_available()
-        
-        try:
-            if self.tushare_pro is None:
-                self.logger.error("未加载Tushare Pro数据源")
-                return pd.DataFrame()
-                
-            self.logger.info(f"获取技术面因子: {ts_code}, 日期: {trade_date}")
-            
-            # 如果未提供日期，使用最近交易日
-            if not trade_date:
-                trade_date = self._get_latest_trade_date()
-                
-            # 构建API参数
-            params = {}
-            if ts_code:
-                params['ts_code'] = ts_code
-            if trade_date:
-                params['trade_date'] = trade_date
-                
-            # 调用API
-            df = self._retry_tushare_api(
-                lambda: self.tushare_pro.stk_factor(**params)
-            )
-            
-            if df.empty:
-                self.logger.warning(f"未找到技术面因子数据: {ts_code}, 日期: {trade_date}")
-                return df
-                
-            # 数据验证
-            self._validate_dataframe(df, ['ts_code', 'trade_date'])
-            
-            return df
-            
-        except Exception as e:
-            self.logger.error(f"获取技术面因子数据失败: {str(e)}")
-            return pd.DataFrame()
-    
-    def get_auction_data(self, ts_code: str, trade_date: str = '', auction_type: str = 'o') -> pd.DataFrame:
-        """获取集合竞价数据 (对应Tushare的stk_auction_o/stk_auction_c)
-        
-        Args:
-            ts_code: 股票代码
-            trade_date: 交易日期 (YYYYMMDD)
-            auction_type: 竞价类型，'o'=开盘，'c'=收盘
-            
-        Returns:
-            集合竞价数据
-        """
-        self._ensure_tushare_available()
-        
-        try:
-            if self.tushare_pro is None:
-                self.logger.error("未加载Tushare Pro数据源")
-                return pd.DataFrame()
-                
-            auction_type_name = "开盘" if auction_type == 'o' else "收盘"
-            self.logger.info(f"获取{auction_type_name}集合竞价: {ts_code}, 日期: {trade_date}")
-            
-            # 如果未提供日期，使用最近交易日
-            if not trade_date:
-                trade_date = self._get_latest_trade_date()
-                
-            # 调用API
-            if auction_type == 'o':
-                df = self._retry_tushare_api(
-                    lambda: self.tushare_pro.stk_auction_o(ts_code=ts_code, trade_date=trade_date)
-                )
-            else:
-                df = self._retry_tushare_api(
-                    lambda: self.tushare_pro.stk_auction_c(ts_code=ts_code, trade_date=trade_date)
-                )
-            
-            if df.empty:
-                self.logger.warning(f"未找到{auction_type_name}集合竞价数据: {ts_code}, 日期: {trade_date}")
-                return df
-                
-            # 数据验证
-            self._validate_dataframe(df, ['ts_code', 'trade_date'])
-            
-            return df
-            
-        except Exception as e:
-            self.logger.error(f"获取集合竞价数据失败: {str(e)}")
-            return pd.DataFrame()
-    
-    def get_nine_turn_indicator(self, ts_code: str, start_date: str = '', end_date: str = '') -> pd.DataFrame:
-        """获取神奇九转指标 (对应Tushare的stk_nineturn)
-        
-        Args:
-            ts_code: 股票代码
-            start_date: 开始日期 (YYYYMMDD)
-            end_date: 结束日期 (YYYYMMDD)
-            
-        Returns:
-            神奇九转指标数据
-        """
-        self._ensure_tushare_available()
-        
-        try:
-            if self.tushare_pro is None:
-                self.logger.error("未加载Tushare Pro数据源")
-                return pd.DataFrame()
-                
-            self.logger.info(f"获取神奇九转指标: {ts_code}")
-            
-            # 构建API参数
-            params = {'ts_code': ts_code}
-            if start_date:
-                params['start_date'] = start_date
-            if end_date:
-                params['end_date'] = end_date
-                
-            # 调用API
-            df = self._retry_tushare_api(
-                lambda: self.tushare_pro.stk_nineturn(**params)
-            )
-            
-            if df.empty:
-                self.logger.warning(f"未找到神奇九转指标数据: {ts_code}")
-                return df
-                
-            # 数据验证
-            self._validate_dataframe(df, ['ts_code', 'trade_date'])
-            
-            return df
-            
-        except Exception as e:
-            self.logger.error(f"获取神奇九转指标数据失败: {str(e)}")
-            return pd.DataFrame()
-    
-    def get_institutional_research(self, ts_code: str = '', start_date: str = '', end_date: str = '') -> pd.DataFrame:
-        """获取机构调研数据 (对应Tushare的stk_surv)
-        
-        Args:
-            ts_code: 股票代码
-            start_date: 开始日期 (YYYYMMDD)
-            end_date: 结束日期 (YYYYMMDD)
-            
-        Returns:
-            机构调研数据
-        """
-        self._ensure_tushare_available()
-        
-        try:
-            if self.tushare_pro is None:
-                self.logger.error("未加载Tushare Pro数据源")
-                return pd.DataFrame()
-                
-            self.logger.info(f"获取机构调研数据: {ts_code}")
-            
-            # 构建API参数
-            params = {}
-            if ts_code:
-                params['ts_code'] = ts_code
-            if start_date:
-                params['start_date'] = start_date
-            if end_date:
-                params['end_date'] = end_date
-                
-            # 调用API
-            df = self._retry_tushare_api(
-                lambda: self.tushare_pro.stk_surv(**params)
-            )
-            
-            if df.empty:
-                self.logger.warning(f"未找到机构调研数据: {ts_code}")
-                return df
-                
-            # 数据验证
-            self._validate_dataframe(df, ['ts_code', 'ann_date'])
-            
-            return df
-            
-        except Exception as e:
-            self.logger.error(f"获取机构调研数据失败: {str(e)}")
-            return pd.DataFrame()
-    
-    def get_broker_recommendations(self, month: str) -> pd.DataFrame:
-        """获取券商月度金股推荐 (对应Tushare的broker_recommend)
-        
-        Args:
-            month: 月度 (YYYYMM)
-            
-        Returns:
-            券商月度金股推荐数据
-        """
-        self._ensure_tushare_available()
-        
-        try:
-            if self.tushare_pro is None:
-                self.logger.error("未加载Tushare Pro数据源")
-                return pd.DataFrame()
-                
-            self.logger.info(f"获取券商月度金股推荐: {month}")
-                
-            # 调用API
-            df = self._retry_tushare_api(
-                lambda: self.tushare_pro.broker_recommend(month=month)
-            )
-            
-            if df.empty:
-                self.logger.warning(f"未找到券商月度金股推荐: {month}")
-                return df
-                
-            # 数据验证
-            self._validate_dataframe(df, ['month', 'ts_code', 'broker'])
-            
-            return df
-            
-        except Exception as e:
-            self.logger.error(f"获取券商月度金股推荐失败: {str(e)}")
-            return pd.DataFrame()
-    
-    def get_hk_holdings(self, ts_code: str = '', trade_date: str = '', start_date: str = '', end_date: str = '') -> pd.DataFrame:
-        """获取沪深港股通持股明细 (对应Tushare的hk_hold)
-        
-        Args:
-            ts_code: 股票代码
-            trade_date: 交易日期 (YYYYMMDD)
-            start_date: 开始日期 (YYYYMMDD)
-            end_date: 结束日期 (YYYYMMDD)
-            
-        Returns:
-            沪深港股通持股明细
-        """
-        self._ensure_tushare_available()
-        
-        try:
-            if self.tushare_pro is None:
-                self.logger.error("未加载Tushare Pro数据源")
-                return pd.DataFrame()
-                
-            self.logger.info(f"获取沪深港股通持股明细: {ts_code}")
-            
-            # 构建API参数
-            params = {}
-            if ts_code:
-                params['ts_code'] = ts_code
-            if trade_date:
-                params['trade_date'] = trade_date
-            if start_date:
-                params['start_date'] = start_date
-            if end_date:
-                params['end_date'] = end_date
-                
-            # 调用API
-            df = self._retry_tushare_api(
-                lambda: self.tushare_pro.hk_hold(**params)
-            )
-            
-            if df.empty:
-                self.logger.warning(f"未找到沪深港股通持股明细: {ts_code}")
-                return df
-                
-            # 数据验证
-            self._validate_dataframe(df, ['ts_code', 'trade_date'])
-            
-            return df
-            
-        except Exception as e:
-            self.logger.error(f"获取沪深港股通持股明细失败: {str(e)}")
-            return pd.DataFrame()
-    
-    def get_ccass_holdings(self, ts_code: str, trade_date: str = '') -> pd.DataFrame:
-        """获取中央结算系统持股汇总 (对应Tushare的ccass_hold)
-        
-        Args:
-            ts_code: 股票代码（港股）
-            trade_date: 交易日期 (YYYYMMDD)
-            
-        Returns:
-            中央结算系统持股汇总
-        """
-        self._ensure_tushare_available()
-        
-        try:
-            if self.tushare_pro is None:
-                self.logger.error("未加载Tushare Pro数据源")
-                return pd.DataFrame()
-                
-            self.logger.info(f"获取中央结算系统持股汇总: {ts_code}, 日期: {trade_date}")
-            
-            # 如果未提供日期，使用最近交易日
-            if not trade_date:
-                trade_date = self._get_latest_trade_date()
-                
-            # 调用API
-            df = self._retry_tushare_api(
-                lambda: self.tushare_pro.ccass_hold(ts_code=ts_code, trade_date=trade_date)
-            )
-            
-            if df.empty:
-                self.logger.warning(f"未找到中央结算系统持股汇总: {ts_code}, 日期: {trade_date}")
-                return df
-                
-            # 数据验证
-            self._validate_dataframe(df, ['ts_code', 'trade_date'])
-            
-            return df
-            
-        except Exception as e:
-            self.logger.error(f"获取中央结算系统持股汇总失败: {str(e)}")
-            return pd.DataFrame()
-    
-    def get_market_concepts(self, src: str = '') -> pd.DataFrame:
-        """获取市场概念分类数据 (对应Tushare的kpl_concept)
-        
-        Args:
-            src: 来源，默认为空，可选'kpl'=卡普兰
-            
-        Returns:
-            市场概念分类数据
-        """
-        self._ensure_tushare_available()
-        
-        try:
-            if self.tushare_pro is None:
-                self.logger.error("未加载Tushare Pro数据源")
-                return pd.DataFrame()
-                
-            self.logger.info(f"获取市场概念分类数据")
-            
-            # 构建API参数
-            params = {}
-            if src:
-                params['src'] = src
-                
-            # 调用API
-            df = self._retry_tushare_api(
-                lambda: self.tushare_pro.kpl_concept(**params)
-            )
-            
-            if df.empty:
-                self.logger.warning(f"未找到市场概念分类数据")
-                return df
-                
-            # 数据验证
-            self._validate_dataframe(df, ['concept_id', 'concept_name'])
-            
-            return df
-            
-        except Exception as e:
-            self.logger.error(f"获取市场概念分类数据失败: {str(e)}")
-            return pd.DataFrame()
-
-    def _get_latest_trade_date(self) -> str:
-        """获取最近的交易日期
-        
-        Returns:
-            最近的交易日期 (YYYYMMDD)
-        """
-        try:
-            # 获取交易日历
-            today = datetime.now()
-            end_date = today.strftime('%Y%m%d')
-            start_date = (today - timedelta(days=10)).strftime('%Y%m%d')
-            
-            trade_cal = self._retry_tushare_api(
-                lambda: self.tushare_pro.trade_cal(start_date=start_date, end_date=end_date, is_open=1)
-            )
-            
-            if not trade_cal.empty:
-                # 返回最新的交易日
-                latest_date = trade_cal['cal_date'].iloc[-1]
-                return latest_date
-            
-            # 如果没有获取到交易日历，则返回昨天的日期
-            return (today - timedelta(days=1)).strftime('%Y%m%d')
-            
-        except Exception as e:
-            self.logger.error(f"获取最近交易日期失败: {str(e)}")
-            # 出错时返回昨天的日期
-            return (datetime.now() - timedelta(days=1)).strftime('%Y%m%d')
 
     def get_financial_data(self, ts_code: str, report_type: str = 'income', period: str = '', start_date: str = '', end_date: str = '') -> pd.DataFrame:
         """获取上市公司财务数据
@@ -1958,3 +1289,104 @@ class ChinaStockProvider:
         except Exception as e:
             self.logger.error(f"获取融资融券数据时出错: {str(e)}")
             return pd.DataFrame()
+
+    def get_stock_data(self, symbol: str, start_date=None, end_date=None, limit=None):
+        """获取股票历史数据
+        使用统一接口获取股票数据，自动选择可用的数据源
+        
+        Args:
+            symbol: 股票代码
+            start_date: 开始日期 (YYYYMMDD)
+            end_date: 结束日期 (YYYYMMDD)
+            limit: 限制条数 (不适用于所有数据源)
+            
+        Returns:
+            DataFrame 包含历史数据，或空的DataFrame
+        """
+        # 参数处理
+        if start_date is None:
+            start_date = (datetime.now() - timedelta(days=120)).strftime('%Y%m%d')
+        if end_date is None:
+            end_date = datetime.now().strftime('%Y%m%d')
+            
+        # 请求数据
+        return self._handle_stock_api(symbol, start_date=start_date, end_date=end_date, limit=limit)
+
+    def _get_latest_trade_date(self) -> str:
+        """获取最近的交易日期
+        
+        Returns:
+            最近的交易日期 (YYYYMMDD)
+        """
+        try:
+            # 获取交易日历
+            today = datetime.now()
+            end_date = today.strftime('%Y%m%d')
+            start_date = (today - timedelta(days=10)).strftime('%Y%m%d')
+            
+            trade_cal = self._retry_tushare_api(
+                lambda: self.tushare_pro.trade_cal(start_date=start_date, end_date=end_date, is_open=1)
+            )
+            
+            if not trade_cal.empty:
+                # 返回最新的交易日
+                latest_date = trade_cal['cal_date'].iloc[-1]
+                return latest_date
+            
+            # 如果没有获取到交易日历，则返回昨天的日期
+            return (today - timedelta(days=1)).strftime('%Y%m%d')
+            
+        except Exception as e:
+            self.logger.error(f"获取最近交易日期失败: {str(e)}")
+            # 出错时返回昨天的日期
+            return (datetime.now() - timedelta(days=1)).strftime('%Y%m%d')
+
+    def _retry_tushare_api(self, api_func, max_retries=3, retry_wait=1):
+        """使用重试机制调用Tushare API
+        
+        Args:
+            api_func: 要调用的API函数
+            max_retries: 最大重试次数
+            retry_wait: 重试等待秒数
+            
+        Returns:
+            API调用结果
+        """
+        for attempt in range(max_retries):
+            try:
+                return api_func()
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    self.logger.warning(f"Tushare API调用失败，尝试重试({attempt+1}/{max_retries}): {str(e)}")
+                    time.sleep(retry_wait * (attempt + 1))  # 指数退避
+                else:
+                    self.logger.error(f"Tushare API调用失败，已达到最大重试次数: {str(e)}")
+                    raise
+                    
+    def _ensure_tushare_available(self):
+        """确保Tushare API可用"""
+        if not self.tushare_pro:
+            try:
+                ts.set_token(self.tushare_token)
+                self.tushare_pro = ts.pro_api()
+                self.logger.info("成功初始化Tushare API")
+            except Exception as e:
+                self.logger.error(f"初始化Tushare API失败: {str(e)}")
+                raise ValueError("Tushare API未初始化，无法访问相关数据")
+                
+    def _validate_dataframe(self, df, required_columns):
+        """验证DataFrame是否包含所需的列
+        
+        Args:
+            df: 要验证的DataFrame
+            required_columns: 所需列的列表
+            
+        Returns:
+            如果验证通过返回True，否则抛出ValueError
+        """
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            error_msg = f"数据缺少必要列: {missing_columns}"
+            self.logger.error(error_msg)
+            raise ValueError(error_msg)
+        return True
